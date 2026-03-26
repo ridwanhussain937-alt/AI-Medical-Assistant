@@ -4,8 +4,7 @@ services:
     runtime: python
     plan: free
     buildCommand: bash build.sh
-    preDeployCommand: python manage.py migrate --noinput && python manage.py configure_site && python manage.py bootstrap_defaults
-    startCommand: gunicorn ai_medical_project.wsgi:application --bind 0.0.0.0:$PORT --workers ${GUNICORN_WORKERS:-1} --timeout ${GUNICORN_TIMEOUT:-180}
+    startCommand: bash start.sh
     healthCheckPath: /healthz
     envVars:
       - key: PYTHON_VERSION
