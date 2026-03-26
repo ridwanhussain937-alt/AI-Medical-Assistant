@@ -1,0 +1,75 @@
+{% extends 'base.html' %}
+
+{% block title %}User Details{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">User Management</p>
+            <h1>{{ managed_user.get_full_name|default:managed_user.username }}</h1>
+            <p>Review the member profile, current login locations, and active devices.</p>
+        </div>
+    </section>
+
+    <div class="dashboard-grid">
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Profile Details</h2>
+                    <p class="card-sub">Identity and account information for this member.</p>
+                </div>
+            </div>
+
+            <div class="profile-summary">
+                <div class="profile-summary-item">
+                    <span class="summary-label">Member Name</span>
+                    <strong>{{ managed_user.get_full_name|default:managed_user.username }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">User ID</span>
+                    <strong>{{ managed_user.email|default:managed_user.username }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Role</span>
+                    <strong>{% if managed_user.is_staff %}Admin{% else %}Member{% endif %}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Status</span>
+                    <strong>{% if active_logins %}Online{% else %}Offline{% endif %}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Mobile</span>
+                    <strong>{{ mobile_number }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Current Locations</span>
+                    <strong>{{ locations|join:", " }}</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Active Devices</h2>
+                    <p class="card-sub">Live device and browser footprint for the selected account.</p>
+                </div>
+            </div>
+
+            <div class="session-list">
+                {% for activity in active_logins %}
+                    <article class="session-card">
+                        <strong>{{ activity.device_name }}</strong>
+                        <span>{{ activity.browser_name }} &bull; {{ activity.location_label }}</span>
+                        <small>Last seen {{ activity.last_seen|date:"M d, Y H:i" }}</small>
+                    </article>
+                {% empty %}
+                    <div class="empty-state">
+                        <h3>No active devices</h3>
+                        <p>This user does not currently have any active tracked sessions.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+{% endblock %}

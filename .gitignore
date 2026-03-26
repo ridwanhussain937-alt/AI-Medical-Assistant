@@ -1,0 +1,48 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Virtual environments
+aivenv/
+venv/
+.venv/
+env/
+.tmp/
+
+# Python cache and tooling
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+_test_scratch/
+
+# Django runtime files
+db.sqlite3
+*.sqlite3
+*.sqlite3-journal
+media/
+staticfiles/
+
+# Generated local assets
+static/*_image.jpg
+static/*_response.mp3
+
+# Generated ML artifacts and exported datasets
+medical_app/ml_models/*.pkl
+medical_app/ml_models/*.json
+medical_app/ml_models/*.jsonl
+!medical_app/ml_models/README.md
+
+# Logs
+*.log
+
+# Editor and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp

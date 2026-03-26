@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load socialaccount %}
+
+{% block title %}Sign In{% endblock %}
+
+{% block content %}
+    <section class="auth-wrapper">
+        <div class="container">
+            <div class="auth-brand">
+                <img
+                    class="auth-logo"
+                    src="{% static 'img/medical-assistant-logo.svg' %}"
+                    alt="AI Medical Assistant logo"
+                >
+                <div>
+                    <p class="eyebrow">AI Medical Assistant</p>
+                    <p class="auth-brand-copy">Secure clinician access</p>
+                </div>
+            </div>
+
+            <p class="eyebrow">Welcome Back</p>
+            <h1>Sign in to your account</h1>
+            <p class="auth-subtitle">Access the dashboard, saved conversations, user activity, and account settings.</p>
+
+            <div class="oauth-stack">
+                <a
+                    class="google-signin-button {% if not google_login_enabled %}button-muted{% endif %}"
+                    href="{% url 'google_login_start' %}?next={{ next|urlencode }}"
+                >
+                    <span class="google-signin-icon" aria-hidden="true">G</span>
+                    <span>Login with Gmail</span>
+                </a>
+                {% if google_login_enabled %}
+                    <p class="oauth-note">
+                        Google opens its account chooser directly. If you're already signed in to Google, you can continue with one click.
+                    </p>
+                {% else %}
+                    <p class="oauth-note">
+                        Gmail login is clickable now, but you still need <code>GOOGLE_OAUTH_CLIENT_ID</code> and <code>GOOGLE_OAUTH_CLIENT_SECRET</code> in <code>.env</code> for Google OAuth to complete successfully.
+                    </p>
+                {% endif %}
+            </div>
+
+            <div class="oauth-divider" aria-hidden="true">
+                <span>or continue with password</span>
+            </div>
+
+            <form method="post" class="stack-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next }}">
+
+                {% if form.non_field_errors %}
+                    <div class="error">{{ form.non_field_errors|striptags }}</div>
+                {% endif %}
+
+                <label for="{{ form.login_id.id_for_label }}">Email ID / User ID</label>
+                {{ form.login_id }}
+                {% if form.login_id.errors %}
+                    <div class="error">{{ form.login_id.errors|striptags }}</div>
+                {% endif %}
+
+                <label for="{{ form.password.id_for_label }}">Password</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <div class="error">{{ form.password.errors|striptags }}</div>
+                {% endif %}
+
+                <button type="submit">Sign In</button>
+            </form>
+
+            <p class="auth-link">
+                Need an account? <a href="{% url 'register' %}">Create one</a>
+            </p>
+        </div>
+    </section>
+{% endblock %}

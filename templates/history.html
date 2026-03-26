@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+
+{% block title %}Clinical History{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">History Timeline</p>
+            <h1>Understand the patient journey with timeline-based records and clinical context.</h1>
+            <p>
+                Search past symptoms, inspect AI findings, review doctor notes, and open compare-ready records from a
+                cleaner longitudinal history workspace.
+            </p>
+        </div>
+    </section>
+
+    <div class="stats-grid">
+        {% for item in history_stats %}
+            <article class="stat-card">
+                <p class="stat-label">{{ item.label }}</p>
+                <h2>{{ item.value }}</h2>
+                <p class="stat-helper">{{ item.helper }}</p>
+            </article>
+        {% endfor %}
+    </div>
+
+    <section class="card section-card">
+        <div class="card-header">
+            <div>
+                <h2>Filter + Search</h2>
+                <p class="card-sub">Find a case by symptom, condition, report text, or risk level.</p>
+            </div>
+        </div>
+
+        <form method="get" class="history-filter-form">
+            <div class="history-filter-grid">
+                <div class="form-field">
+                    <label for="history-search">Search Records</label>
+                    <input
+                        id="history-search"
+                        type="text"
+                        name="search"
+                        value="{{ history_search }}"
+                        placeholder="Search symptoms, AI result, report text, or condition"
+                    >
+                </div>
+                <div class="form-field">
+                    <label for="history-risk">Risk Filter</label>
+                    <select id="history-risk" name="risk">
+                        <option value="">All risk levels</option>
+                        <option value="High" {% if history_risk == "High" %}selected{% endif %}>High</option>
+                        <option value="Medium" {% if history_risk == "Medium" %}selected{% endif %}>Medium</option>
+                        <option value="Low" {% if history_risk == "Low" %}selected{% endif %}>Low</option>
+                    </select>
+                </div>
+                {% if selected_session %}
+                    <input type="hidden" name="session_id" value="{{ selected_session.id }}">
+                {% endif %}
+            </div>
+            <div class="form-actions">
+                <button type="submit">Apply Filters</button>
+                <a class="secondary-link" href="{% url 'history' %}">Reset</a>
+            </div>
+        </form>
+    </section>
+
+    <div class="history-workspace">
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Timeline</h2>
+                    <p class="card-sub">Saved clinical cases with symptoms, AI result, doctor data, and compare actions.</p>
+                </div>
+            </div>
+
+            <div class="timeline-list">
+                {% for record in timeline_records %}
+                    <article class="timeline-case-card">
+                        <div class="timeline-line">
+                            <span class="timeline-node"></span>
+                        </div>
+                        <div class="timeline-case-body">
+                            <div class="timeline-case-top">
+                                <div>
+                                    <span class="summary-label">{{ record.analysis.created_at|date:"M d, Y H:i" }}</span>
+                                    <h3>{{ record.analysis.title|default:"Clinical Record" }}</h3>
+                                </div>
+                                <span class="risk-pill risk-pill-{{ record.risk_css }}">{{ record.analysis.risk_level|default:"Unknown" }}</span>
+                            </div>
+
+                            <div class="timeline-case-grid">
+                                <div class="timeline-case-panel">
+                                    <span class="summary-label">Symptoms</span>
+                                    <p>
+                                        {{ record.analysis.symptoms_text|default:record.analysis.report_text|truncatechars:220|default:"No symptom note recorded." }}
+                                    </p>
+                                </div>
+                                <div class="timeline-case-panel">
+                                    <span class="summary-label">AI Result</span>
+                                    <p>
+                                        <strong>{{ record.analysis.predicted_condition|default:"General review required" }}</strong><br>
+                                        {{ record.analysis.ai_summary|truncatechars:220|default:"AI summary not available." }}
+                                    </p>
+                                </div>
+                                <div class="timeline-case-panel">
+                                    <span class="summary-label">Doctor Data</span>
+                                    <p>
+                                        <strong>{{ record.doctor_label }}</strong><br>
+                                        {{ record.doctor_summary }}
+                                    </p>
+                                </div>
+                                <div class="timeline-case-panel">
+                                    <span class="summary-label">Clinical Snapshot</span>
+                                    <p>
+                                        Progression: {{ record.analysis.progression_status|default:"Baseline" }}<br>
+                                        Disease level:
+                                        {% if record.analysis.disease_percentage != None %}
+                                            {{ record.analysis.disease_percentage|floatformat:0 }}%
+                                        {% else %}
+                                            Not available
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="timeline-actions">
+                                <a class="secondary-link" href="{{ record.view_url }}">View Record</a>
+                                <a class="secondary-link" href="{{ record.compare_url }}">Compare</a>
+                            </div>
+                        </div>
+                    </article>
+                {% empty %}
+                    <div class="empty-state">
+                        <h3>No timeline records found</h3>
+                        <p>Adjust the filters or create a new analysis from the intake and reports workspaces.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <aside class="history-sidebar">
+            <section class="history-list-panel">
+                <div class="card-header">
+                    <div>
+                        <h2>Conversation Archive</h2>
+                        <p class="card-sub">Saved assistant sessions that support the same patient journey.</p>
+                    </div>
+                </div>
+
+                {% if sessions %}
+                    <ul class="history-sessions">
+                        {% for s in sessions %}
+                            <li class="session-item {% if selected_session and selected_session.id == s.id %}active{% endif %}">
+                                <a href="{% url 'history' %}?session_id={{ s.id }}{% if history_search %}&search={{ history_search|urlencode }}{% endif %}{% if history_risk %}&risk={{ history_risk|urlencode }}{% endif %}">
+                                    Session {{ s.id }} - {{ s.created_at|date:"M d, Y H:i" }}
+                                </a>
+                                <div class="session-count">{{ s.message_count }} messages</div>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="empty-state">
+                        <h3>No sessions yet</h3>
+                        <p>Start a follow-up chat to build a supporting conversation archive.</p>
+                    </div>
+                {% endif %}
+            </section>
+
+            <section class="history-detail-panel">
+                {% if selected_session %}
+                    <div class="session-header">
+                        <h2>Detailed View</h2>
+                        <small>Session {{ selected_session.id }} started {{ selected_session.created_at|date:"M d, Y H:i" }}</small>
+                    </div>
+
+                    <div class="history-messages">
+                        {% for msg in messages %}
+                            <article class="history-message {{ msg.role }}">
+                                <div class="meta">{{ msg.role|title }} &bull; {{ msg.created_at|date:"M d, H:i" }}</div>
+                                <div class="body">{{ msg.text|linebreaksbr }}</div>
+                                {% if msg.attachment %}
+                                    <div>
+                                        <a href="{{ msg.attachment.url }}" target="_blank" rel="noopener noreferrer">
+                                            View attachment
+                                        </a>
+                                    </div>
+                                {% endif %}
+                            </article>
+                        {% empty %}
+                            <div class="empty-state">
+                                <h3>No messages yet</h3>
+                                <p>This session exists, but no saved messages are available to display.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state">
+                        <h3>No session selected</h3>
+                        <p>Select a conversation from the archive to inspect its detailed message thread.</p>
+                    </div>
+                {% endif %}
+            </section>
+        </aside>
+    </div>
+{% endblock %}

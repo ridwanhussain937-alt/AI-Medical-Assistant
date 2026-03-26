@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Account{% endblock %}
+
+{% block content %}
+    <section class="auth-wrapper">
+        <div class="container">
+            <div class="auth-brand">
+                <img
+                    class="auth-logo"
+                    src="{% static 'img/medical-assistant-logo.svg' %}"
+                    alt="AI Medical Assistant logo"
+                >
+                <div>
+                    <p class="eyebrow">AI Medical Assistant</p>
+                    <p class="auth-brand-copy">Verified account onboarding</p>
+                </div>
+            </div>
+
+            <p class="eyebrow">New Account</p>
+            <h1>Create your workspace</h1>
+            <p class="auth-subtitle">Set up a secure account with profile details, dashboard access, login tracking, and email OTP verification.</p>
+
+            <form method="post" class="stack-form">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="error">{{ form.non_field_errors|striptags }}</div>
+                {% endif %}
+
+                <label for="{{ form.first_name.id_for_label }}">First Name</label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}
+                    <div class="error">{{ form.first_name.errors|striptags }}</div>
+                {% endif %}
+
+                <label for="{{ form.last_name.id_for_label }}">Last Name</label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}
+                    <div class="error">{{ form.last_name.errors|striptags }}</div>
+                {% endif %}
+
+                <label for="{{ form.email.id_for_label }}">Email ID</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <div class="error">{{ form.email.errors|striptags }}</div>
+                {% endif %}
+
+                <ul class="password-rules">
+                    <li>Email ID is used for sign-in.</li>
+                    <li>A verification OTP will be sent to your email address.</li>
+                    <li>Use at least 8 characters.</li>
+                    <li>Avoid common or easily guessed passwords.</li>
+                    <li>Do not use a password made entirely of numbers.</li>
+                </ul>
+
+                <label for="{{ form.password1.id_for_label }}">Password</label>
+                {{ form.password1 }}
+                {% if form.password1.errors %}
+                    <div class="error">{{ form.password1.errors|striptags }}</div>
+                {% endif %}
+
+                <label for="{{ form.password2.id_for_label }}">Confirm Password</label>
+                {{ form.password2 }}
+                {% if form.password2.errors %}
+                    <div class="error">{{ form.password2.errors|striptags }}</div>
+                {% endif %}
+
+                <button type="submit">Continue to Email Verification</button>
+            </form>
+
+            <p class="auth-link">
+                Already have an account? <a href="{% url 'login' %}">Sign in</a>
+            </p>
+        </div>
+    </section>
+{% endblock %}

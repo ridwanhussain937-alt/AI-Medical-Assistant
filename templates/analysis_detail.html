@@ -1,0 +1,259 @@
+{% extends 'base.html' %}
+
+{% block title %}Clinical Record{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">Clinical Record</p>
+            <h1>{{ analysis.title }}</h1>
+            <p>Review AI findings, report comparison, and doctor treatment decisions for this saved analysis.</p>
+        </div>
+    </section>
+
+    <div class="dashboard-grid">
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Analysis Summary</h2>
+                    <p class="card-sub">AI and ML-supported interpretation of the uploaded report and image data.</p>
+                </div>
+            </div>
+
+            <div class="profile-summary">
+                <div class="profile-summary-item">
+                    <span class="summary-label">Predicted Condition</span>
+                    <strong>{{ analysis.predicted_condition }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Risk Level</span>
+                    <strong>{{ analysis.risk_level }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Detected Conditions</span>
+                    <strong>{{ analysis.detected_conditions_count }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Confidence Score</span>
+                    <strong>{{ analysis.confidence_score|floatformat:2 }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Disease Level</span>
+                    <strong>
+                        {% if analysis.disease_percentage != None %}
+                            {{ analysis.disease_percentage|floatformat:0 }}%
+                        {% else %}
+                            Not identified
+                        {% endif %}
+                    </strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Progression Status</span>
+                    <strong>{{ analysis.progression_status }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Model Source</span>
+                    <strong>{{ analysis.model_source }}</strong>
+                </div>
+            </div>
+
+            <div class="stack analysis-copy">
+                {% if analysis.symptoms_text %}
+                    <div>
+                        <strong>Submitted Symptoms</strong>
+                        <p>{{ analysis.symptoms_text|linebreaksbr }}</p>
+                    </div>
+                {% endif %}
+                {% if analysis.transcription_text %}
+                    <div>
+                        <strong>Voice Transcription</strong>
+                        <p>{{ analysis.transcription_text|linebreaksbr }}</p>
+                    </div>
+                {% endif %}
+                <div>
+                    <strong>AI Summary</strong>
+                    <p>{{ analysis.ai_summary|linebreaksbr }}</p>
+                </div>
+                {% if analysis.report_text %}
+                    <div>
+                        <strong>Report Content</strong>
+                        <p>{{ analysis.report_text|linebreaksbr }}</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Comparative Insight</h2>
+                    <p class="card-sub">Comparison against the previous saved record.</p>
+                </div>
+            </div>
+
+            <div class="profile-summary">
+                <div class="profile-summary-item">
+                    <span class="summary-label">Status</span>
+                    <strong>{{ comparison.status }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">{{ comparison.metric_label|default:"Condition Delta" }}</span>
+                    <strong>{{ comparison.delta_label|default:comparison.delta }}</strong>
+                </div>
+                <div class="profile-summary-item profile-summary-wide">
+                    <span class="summary-label">Clinical Interpretation</span>
+                    <strong>{{ comparison.message }}</strong>
+                </div>
+            </div>
+
+            {% if percentage_comparison %}
+                <div class="comparison-visual-grid comparison-visual-grid-compact">
+                    <div class="comparison-pie-wrap">
+                        <div
+                            class="comparison-pie"
+                            style="--comparison-fill: {{ percentage_comparison.chart_fill_degrees }}deg;"
+                            aria-label="Disease reduction versus remaining percentage"
+                        >
+                            <div class="comparison-pie-center">
+                                <strong>{{ percentage_comparison.current_percentage|floatformat:0 }}%</strong>
+                                <span>Current level</span>
+                            </div>
+                        </div>
+
+                        <div class="comparison-legend">
+                            <div class="comparison-legend-item">
+                                <span class="comparison-swatch comparison-swatch-change"></span>
+                                <span>{{ percentage_comparison.change_label }}: {{ percentage_comparison.change_percentage|floatformat:0 }}%</span>
+                            </div>
+                            <div class="comparison-legend-item">
+                                <span class="comparison-swatch comparison-swatch-remaining"></span>
+                                <span>Remaining: {{ percentage_comparison.remaining_percentage|floatformat:0 }}%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="profile-summary">
+                        <div class="profile-summary-item">
+                            <span class="summary-label">Previous Report</span>
+                            <strong>{{ percentage_comparison.previous_percentage|floatformat:0 }}%</strong>
+                        </div>
+                        <div class="profile-summary-item">
+                            <span class="summary-label">Current Report</span>
+                            <strong>{{ percentage_comparison.current_percentage|floatformat:0 }}%</strong>
+                        </div>
+                        <div class="profile-summary-item">
+                            <span class="summary-label">{{ percentage_comparison.change_label }}</span>
+                            <strong>{{ percentage_comparison.change_percentage|floatformat:0 }}%</strong>
+                        </div>
+                        <div class="profile-summary-item">
+                            <span class="summary-label">Remaining</span>
+                            <strong>{{ percentage_comparison.remaining_percentage|floatformat:0 }}%</strong>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="stack analysis-assets">
+                {% if analysis.report_file %}
+                    <a href="{{ analysis.report_file.url }}" target="_blank" rel="noopener noreferrer">Open Uploaded Report</a>
+                {% endif %}
+                {% if analysis.previous_report_file %}
+                    <a href="{{ analysis.previous_report_file.url }}" target="_blank" rel="noopener noreferrer">Open Previous Comparison Report</a>
+                {% endif %}
+                {% if analysis.medical_image %}
+                    <a href="{{ analysis.medical_image.url }}" target="_blank" rel="noopener noreferrer">Open Uploaded Image</a>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <div class="dashboard-grid">
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Doctor Treatment Management</h2>
+                    <p class="card-sub">Add real-time treatment decisions with doctor details and audit tracking.</p>
+                </div>
+            </div>
+
+            <form method="post" class="stack-form">
+                {% csrf_token %}
+
+                <div class="info-banner">
+                    Doctor-reviewed treatments are automatically converted into structured training records for future ML model updates.
+                </div>
+
+                <label for="{{ treatment_form.doctor_name.id_for_label }}">Doctor Name</label>
+                {{ treatment_form.doctor_name }}
+                {% if treatment_form.doctor_name.errors %}
+                    <div class="error">{{ treatment_form.doctor_name.errors|striptags }}</div>
+                {% endif %}
+
+                <label for="{{ treatment_form.doctor_id.id_for_label }}">Doctor ID</label>
+                {{ treatment_form.doctor_id }}
+                {% if treatment_form.doctor_id.errors %}
+                    <div class="error">{{ treatment_form.doctor_id.errors|striptags }}</div>
+                {% endif %}
+
+                <label for="{{ treatment_form.specialization.id_for_label }}">Specialization</label>
+                {{ treatment_form.specialization }}
+                {% if treatment_form.specialization.errors %}
+                    <div class="error">{{ treatment_form.specialization.errors|striptags }}</div>
+                {% endif %}
+
+                <label for="{{ treatment_form.contact_details.id_for_label }}">Contact Details</label>
+                {{ treatment_form.contact_details }}
+                {% if treatment_form.contact_details.errors %}
+                    <div class="error">{{ treatment_form.contact_details.errors|striptags }}</div>
+                {% endif %}
+
+                <label for="{{ treatment_form.treatment_notes.id_for_label }}">Treatment Notes</label>
+                {{ treatment_form.treatment_notes }}
+                {% if treatment_form.treatment_notes.errors %}
+                    <div class="error">{{ treatment_form.treatment_notes.errors|striptags }}</div>
+                {% endif %}
+
+                <button type="submit">Save Treatment Entry</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Treatment Audit Log</h2>
+                    <p class="card-sub">Track who added the treatment, what changed, and when it happened.</p>
+                </div>
+            </div>
+
+            <div class="session-list">
+                {% for treatment in treatments %}
+                    <article class="session-card">
+                        <strong>{{ treatment.doctor_name }} ({{ treatment.specialization }})</strong>
+                        <span>Doctor ID: {{ treatment.doctor_id }}{% if treatment.contact_details %} &bull; {{ treatment.contact_details }}{% endif %}</span>
+                        <span>{{ treatment.treatment_notes|linebreaksbr }}</span>
+                        {% if treatment.training_record %}
+                            <span>
+                                Training dataset synced:
+                                {{ treatment.training_record.target_condition }}
+                                &bull; quality {{ treatment.training_record.quality_score }}/100
+                            </span>
+                        {% endif %}
+                        <small>
+                            Added by {{ treatment.added_by.get_full_name|default:treatment.added_by.username|default:"System" }}
+                            on {{ treatment.created_at|date:"M d, Y H:i" }}
+                        </small>
+                        <div class="action-links">
+                            <a href="{% url 'treatment_entry_edit' analysis.id treatment.id %}">Edit</a>
+                            <a href="{% url 'treatment_entry_delete' analysis.id treatment.id %}">Delete</a>
+                        </div>
+                    </article>
+                {% empty %}
+                    <div class="empty-state">
+                        <h3>No treatments recorded yet</h3>
+                        <p>Add the first treatment entry to start the doctor audit trail for this case.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+    {% if download_template_url %}
+        <li>
+            <a href="{{ download_template_url }}">Download import template</a>
+        </li>
+    {% endif %}
+    {% if download_sample_zip_url %}
+        <li>
+            <a href="{{ download_sample_zip_url }}">Download sample ZIP</a>
+        </li>
+    {% endif %}
+    {% if training_center_url %}
+        <li>
+            <a href="{{ training_center_url }}">Open training center</a>
+        </li>
+    {% endif %}
+    {{ block.super }}
+{% endblock %}

@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+
+{% block title %}Profile & Preferences{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">Profile Settings</p>
+            <h1>Personalize the assistant while keeping your medical profile and security settings current.</h1>
+            <p>
+                Manage personal details, medical context, AI behavior, notifications, privacy, performance, report
+                preferences, and password security from one organized workspace.
+            </p>
+        </div>
+    </section>
+
+    <div class="stats-grid">
+        {% for item in profile_workspace_stats %}
+            <article class="stat-card">
+                <p class="stat-label">{{ item.label }}</p>
+                <h2>{{ item.value }}</h2>
+                <p class="stat-helper">{{ item.helper }}</p>
+            </article>
+        {% endfor %}
+    </div>
+
+    <div class="dashboard-grid account-dashboard-grid">
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Preferences Summary</h2>
+                    <p class="card-sub">Quick snapshot of the way the assistant is currently configured for you.</p>
+                </div>
+            </div>
+
+            <div class="profile-summary">
+                <div class="profile-summary-item">
+                    <span class="summary-label">Language</span>
+                    <strong>{{ profile_preferences_summary.language|title }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Response Style</span>
+                    <strong>{{ profile_preferences_summary.response_style|title }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">AI Behavior</span>
+                    <strong>{{ profile_preferences_summary.ai_behavior|title }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Privacy</span>
+                    <strong>{{ profile_preferences_summary.privacy_mode|title }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Performance</span>
+                    <strong>{{ profile_preferences_summary.performance_mode|title }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Voice Summary</span>
+                    <strong>{% if profile_preferences_summary.voice_summary_enabled %}Enabled{% else %}Disabled{% endif %}</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Report Management</h2>
+                    <p class="card-sub">Recent records and settings that shape report analysis and comparison behavior.</p>
+                </div>
+            </div>
+
+            <div class="session-list">
+                {% for analysis in recent_profile_analyses %}
+                    <article class="session-card">
+                        <strong>{{ analysis.title|default:"Clinical Record" }}</strong>
+                        <span>{{ analysis.predicted_condition|default:"General review required" }} &bull; {{ analysis.risk_level|default:"Unknown risk" }}</span>
+                        <small>{{ analysis.created_at|date:"M d, Y H:i" }}</small>
+                    </article>
+                {% empty %}
+                    <div class="empty-state">
+                        <h3>No saved analyses yet</h3>
+                        <p>New intake and report records will appear here once your workspace starts collecting cases.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <div class="account-grid profile-workspace-grid">
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Profile, Medical Info &amp; AI Preferences</h2>
+                    <p class="card-sub">Everything the assistant uses to personalize language, follow-up, and safer guidance.</p>
+                </div>
+            </div>
+
+            <form method="post" class="stack-form profile-workspace-form">
+                {% csrf_token %}
+                <input type="hidden" name="form_type" value="profile">
+
+                {% if profile_form.non_field_errors %}
+                    <div class="error">{{ profile_form.non_field_errors|striptags }}</div>
+                {% endif %}
+
+                <section class="settings-section-card" id="personal-info">
+                    <div class="settings-section-head">
+                        <h3>Personal Info</h3>
+                        <p>Core identity and contact information for your account.</p>
+                    </div>
+                    <div class="settings-field-grid">
+                        {% include 'partials/form_field.html' with field=profile_form.first_name %}
+                        {% include 'partials/form_field.html' with field=profile_form.last_name %}
+                        {% include 'partials/form_field.html' with field=profile_form.email %}
+                        {% include 'partials/form_field.html' with field=profile_form.mobile_number %}
+                        {% include 'partials/form_field.html' with field=profile_form.date_of_birth %}
+                        {% include 'partials/form_field.html' with field=profile_form.gender %}
+                    </div>
+                </section>
+
+                <section class="settings-section-card" id="medical-info">
+                    <div class="settings-section-head">
+                        <h3>Medical Info</h3>
+                        <p>Clinical context that can improve personalization and safer recommendations.</p>
+                    </div>
+                    <div class="settings-field-grid">
+                        {% include 'partials/form_field.html' with field=profile_form.blood_group %}
+                        {% include 'partials/form_field.html' with field=profile_form.emergency_contact %}
+                        {% include 'partials/form_field.html' with field=profile_form.allergies %}
+                        {% include 'partials/form_field.html' with field=profile_form.chronic_conditions %}
+                        {% include 'partials/form_field.html' with field=profile_form.current_medications %}
+                    </div>
+                </section>
+
+                <section class="settings-section-card" id="ai-preferences">
+                    <div class="settings-section-head">
+                        <h3>AI Preferences</h3>
+                        <p>Control language, response style, alerts, and report comparison behavior.</p>
+                    </div>
+                    <div class="settings-field-grid">
+                        {% include 'partials/form_field.html' with field=profile_form.language_preference %}
+                        {% include 'partials/form_field.html' with field=profile_form.response_style %}
+                        {% include 'partials/form_field.html' with field=profile_form.ai_risk_preference %}
+                        {% include 'partials/form_field.html' with field=profile_form.notification_preference %}
+                        {% include 'partials/form_field.html' with field=profile_form.privacy_mode %}
+                        {% include 'partials/form_field.html' with field=profile_form.performance_mode %}
+                    </div>
+                    <div class="settings-toggle-grid">
+                        <label class="checkbox-card">
+                            {{ profile_form.voice_summary_enabled }}
+                            <span>
+                                <strong>Voice Summaries</strong>
+                                <small>Generate spoken clinical summaries when analysis succeeds.</small>
+                            </span>
+                        </label>
+                        <label class="checkbox-card">
+                            {{ profile_form.auto_compare_reports }}
+                            <span>
+                                <strong>Auto Compare Reports</strong>
+                                <small>Use the previous saved report automatically when no earlier file is uploaded.</small>
+                            </span>
+                        </label>
+                    </div>
+                </section>
+
+                <div class="form-actions">
+                    <button type="submit">Update Profile</button>
+                    <a class="secondary-link" href="{% url 'dashboard' %}">Back to Dashboard</a>
+                </div>
+            </form>
+        </section>
+
+        <div class="account-sidebar-stack">
+            <section class="card section-card">
+                <div class="card-header">
+                    <div>
+                        <h2>Security Settings</h2>
+                        <p class="card-sub">Rotate your password while keeping the current session signed in.</p>
+                    </div>
+                </div>
+
+                <form method="post" class="stack-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="password">
+
+                    {% include 'partials/form_field.html' with field=password_form.old_password %}
+                    {% include 'partials/form_field.html' with field=password_form.new_password1 %}
+                    {% include 'partials/form_field.html' with field=password_form.new_password2 %}
+
+                    <button type="submit">Update Password</button>
+                </form>
+            </section>
+
+            <section class="card section-card">
+                <div class="card-header">
+                    <div>
+                        <h2>Medical Summary</h2>
+                        <p class="card-sub">Quick review of the saved health context currently available to the assistant.</p>
+                    </div>
+                </div>
+
+                <div class="profile-summary">
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Blood Group</span>
+                        <strong>{{ medical_profile_summary.blood_group }}</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Emergency Contact</span>
+                        <strong>{{ medical_profile_summary.emergency_contact }}</strong>
+                    </div>
+                    <div class="profile-summary-item profile-summary-wide">
+                        <span class="summary-label">Allergies</span>
+                        <strong>{{ medical_profile_summary.allergies }}</strong>
+                    </div>
+                    <div class="profile-summary-item profile-summary-wide">
+                        <span class="summary-label">Chronic Conditions</span>
+                        <strong>{{ medical_profile_summary.chronic_conditions }}</strong>
+                    </div>
+                    <div class="profile-summary-item profile-summary-wide">
+                        <span class="summary-label">Current Medications</span>
+                        <strong>{{ medical_profile_summary.current_medications }}</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card section-card">
+                <div class="card-header">
+                    <div>
+                        <h2>Active Devices</h2>
+                        <p class="card-sub">Recent signed-in devices and locations connected to your account.</p>
+                    </div>
+                </div>
+
+                <div class="session-list">
+                    {% for activity in active_login_snapshot %}
+                        <article class="session-card">
+                            <strong>{{ activity.device_name|default:"Unknown device" }}</strong>
+                            <span>{{ activity.browser_name|default:"Browser not detected" }} &bull; {{ activity.location_label|default:"Location unavailable" }}</span>
+                            <small>Last seen {{ activity.last_seen|date:"M d, Y H:i" }}</small>
+                        </article>
+                    {% empty %}
+                        <div class="empty-state">
+                            <h3>No active device snapshot</h3>
+                            <p>Authenticated activity will appear here once recent sessions are recorded.</p>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        </div>
+    </div>
+{% endblock %}

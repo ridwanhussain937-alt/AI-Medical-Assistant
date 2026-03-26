@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit User{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">User Management</p>
+            <h1>Edit {{ managed_user.get_full_name|default:managed_user.username }}</h1>
+            <p>Update member details, role assignment, status, and contact information.</p>
+        </div>
+    </section>
+
+    <section class="card narrow-card">
+        <form method="post" class="stack-form">
+            {% csrf_token %}
+
+            <label for="{{ form.username.id_for_label }}">User ID</label>
+            {{ form.username }}
+
+            <label for="{{ form.first_name.id_for_label }}">First Name</label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}
+                <div class="error">{{ form.first_name.errors|striptags }}</div>
+            {% endif %}
+
+            <label for="{{ form.last_name.id_for_label }}">Last Name</label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}
+                <div class="error">{{ form.last_name.errors|striptags }}</div>
+            {% endif %}
+
+            <label for="{{ form.email.id_for_label }}">Email ID</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+                <div class="error">{{ form.email.errors|striptags }}</div>
+            {% endif %}
+
+            <label for="{{ form.mobile_number.id_for_label }}">Mobile Number</label>
+            {{ form.mobile_number }}
+            {% if form.mobile_number.errors %}
+                <div class="error">{{ form.mobile_number.errors|striptags }}</div>
+            {% endif %}
+
+            <label class="checkbox-row">{{ form.is_staff }} Administrator role</label>
+            <label class="checkbox-row">{{ form.is_active }} Active account</label>
+            <label class="checkbox-row">{{ form.training_console_enabled }} Developer training access</label>
+
+            <div class="form-actions">
+                <button type="submit">Save Changes</button>
+                <a class="secondary-link" href="{% url 'dashboard' %}">Cancel</a>
+            </div>
+        </form>
+    </section>
+{% endblock %}

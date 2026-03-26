@@ -1,0 +1,285 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Clinical Intake{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/upload.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+    <section class="page-intro">
+        <div>
+            <p class="eyebrow">Clinical Intake</p>
+            <h1>Capture symptoms, analyze reports and images, and generate clinical decision support.</h1>
+            <p>
+                Record a voice note, upload a medical image, attach report findings, or type symptoms manually.
+                The assistant returns a structured response, saves the clinical record, and supports follow-up analytics on the dashboard.
+            </p>
+        </div>
+    </section>
+
+    {% if error_message %}
+        <div class="flash flash-error">{{ error_message }}</div>
+    {% endif %}
+
+    <form id="mainForm" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="grid">
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Voice Recording</h2>
+                        <p class="card-sub">Capture the patient narrative directly from the browser.</p>
+                    </div>
+                </div>
+                <div class="button-group">
+                    <button type="button" class="rec" onclick="startRec()">Start Recording</button>
+                    <button type="button" class="stop" onclick="stopRec()">Stop Recording</button>
+                </div>
+                <div class="timer" id="timer">00:00</div>
+                <p class="field-note">The recorded file will be attached to this form automatically.</p>
+                <input type="file" id="audioFile" name="audio" hidden>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Transcription</h2>
+                        <p class="card-sub">Speech-to-text output appears here after processing.</p>
+                    </div>
+                </div>
+                <textarea
+                    class="auto-expand"
+                    readonly
+                    placeholder="Transcribed speech will appear here."
+                >{{ speech_text }}</textarea>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Medical Image</h2>
+                        <p class="card-sub">Upload an image file or capture one from the camera.</p>
+                    </div>
+                </div>
+                <div class="stack">
+                    <input type="file" name="image" accept="image/*" onchange="previewImage(event)">
+                    <div class="button-group">
+                        <button type="button" onclick="openCamera()">Open Camera</button>
+                        <button type="button" onclick="capturePhoto()">Capture Photo</button>
+                    </div>
+                    <video id="camera" width="100%" autoplay playsinline muted style="display:none"></video>
+                    <img id="preview" class="preview" alt="Selected medical image preview">
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Doctor Response</h2>
+                        <p class="card-sub">Structured guidance is shown here once analysis completes.</p>
+                    </div>
+                </div>
+                <textarea
+                    class="auto-expand"
+                    readonly
+                    placeholder="The AI summary will appear here."
+                >{{ doctor_response }}</textarea>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Report Findings Summary</h2>
+                        <p class="card-sub">Structured explanation of uploaded report data and detected clinical patterns.</p>
+                    </div>
+                </div>
+                <textarea
+                    class="auto-expand"
+                    readonly
+                    placeholder="Report analysis findings will appear here."
+                >{{ report_summary }}</textarea>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Symptoms</h2>
+                        <p class="card-sub">Use this when you want to describe the case manually.</p>
+                    </div>
+                </div>
+                <textarea
+                    class="auto-expand"
+                    name="symptoms"
+                    placeholder="Describe the symptoms, duration, severity, and any relevant history."
+                >{{ submitted_symptoms }}</textarea>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Voice Output</h2>
+                        <p class="card-sub">Listen to the generated spoken summary when available.</p>
+                    </div>
+                </div>
+                {% if audio_url %}
+                    <audio controls preload="metadata">
+                        <source src="{{ audio_url }}" type="audio/mpeg">
+                    </audio>
+                {% elif user.is_authenticated and not voice_summary_available %}
+                    <p class="muted">Voice summary is disabled in your profile preferences.</p>
+                {% else %}
+                    <p class="muted">Audio playback becomes available after a successful analysis.</p>
+                {% endif %}
+            </section>
+        </div>
+
+        <footer class="footer">
+            <button type="submit" id="analyzeBtn">Analyze Patient</button>
+        </footer>
+    </form>
+
+    <section class="report-launcher-card">
+        <div class="report-launcher-copy">
+            <p class="eyebrow">Reports Workspace</p>
+            <h2>Need report interpretation or previous-vs-current comparison?</h2>
+            <p class="section-copy">
+                Open the dedicated reports page for current medical report review and previous report comparison.
+            </p>
+        </div>
+        <a class="secondary-link report-launcher-button" href="{% url 'report_intake' %}">
+            Open Reports &amp; Comparison
+        </a>
+    </section>
+
+    {% if latest_analysis and user.is_authenticated %}
+        <section class="card analysis-result-card">
+            <div class="card-header">
+                <div>
+                    <h2>Latest Clinical Record Saved</h2>
+                    <p class="card-sub">This analysis has been stored for comparison, dashboard analytics, and treatment tracking.</p>
+                </div>
+                <a class="secondary-link" href="{% url 'analysis_detail' latest_analysis.id %}">Open Record</a>
+            </div>
+
+            <div class="profile-summary">
+                <div class="profile-summary-item">
+                    <span class="summary-label">Predicted Condition</span>
+                    <strong>{{ latest_analysis.predicted_condition }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Risk Level</span>
+                    <strong>{{ latest_analysis.risk_level }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Detected Conditions</span>
+                    <strong>{{ latest_analysis.detected_conditions_count }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Model Source</span>
+                    <strong>{{ latest_analysis.model_source }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Disease Level</span>
+                    <strong>
+                        {% if latest_analysis.disease_percentage != None %}
+                            {{ latest_analysis.disease_percentage|floatformat:0 }}%
+                        {% else %}
+                            Not identified
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
+    {% if report_comparison %}
+        <section class="card analysis-result-card">
+            <div class="card-header">
+                <div>
+                    <h2>Disease Burden Comparison</h2>
+                    <p class="card-sub">Previous and current reports were compared automatically to show improvement and remaining disease burden.</p>
+                </div>
+            </div>
+
+            <div class="comparison-visual-grid">
+                <div class="comparison-pie-wrap">
+                    <div
+                        class="comparison-pie"
+                        style="--comparison-fill: {{ report_comparison.chart_fill_degrees }}deg;"
+                        aria-label="Disease reduction versus remaining percentage"
+                    >
+                        <div class="comparison-pie-center">
+                            <strong>{{ report_comparison.current_percentage|floatformat:0 }}%</strong>
+                            <span>Current level</span>
+                        </div>
+                    </div>
+
+                    <div class="comparison-legend">
+                        <div class="comparison-legend-item">
+                            <span class="comparison-swatch comparison-swatch-change"></span>
+                            <span>{{ report_comparison.change_label }}: {{ report_comparison.change_percentage|floatformat:0 }}%</span>
+                        </div>
+                        <div class="comparison-legend-item">
+                            <span class="comparison-swatch comparison-swatch-remaining"></span>
+                            <span>Remaining: {{ report_comparison.remaining_percentage|floatformat:0 }}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-summary">
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Previous Report</span>
+                        <strong>{{ report_comparison.previous_percentage|floatformat:0 }}%</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Current Report</span>
+                        <strong>{{ report_comparison.current_percentage|floatformat:0 }}%</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">{{ report_comparison.change_label }}</span>
+                        <strong>{{ report_comparison.change_percentage|floatformat:0 }}%</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Remaining</span>
+                        <strong>{{ report_comparison.remaining_percentage|floatformat:0 }}%</strong>
+                    </div>
+                    <div class="profile-summary-item profile-summary-wide">
+                        <span class="summary-label">Interpretation</span>
+                        <strong>{{ report_comparison.message }}</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
+    <section class="feature-section">
+        <div class="section-heading">
+            <div>
+                <p class="eyebrow">Quick Access</p>
+                <h2>Explore the platform</h2>
+            </div>
+            <p class="section-copy">
+                These featured links are loaded from the database so you can update the home page without changing code.
+            </p>
+        </div>
+
+        <div class="feature-grid">
+            {% for item in featured_images %}
+                <a class="feature-card" href="{{ item.target_url }}">
+                    <img src="{{ item.image_url }}" alt="{{ item.title }}">
+                    <div class="feature-card-body">
+                        <h3>{{ item.title }}</h3>
+                        <p>{{ item.caption }}</p>
+                    </div>
+                </a>
+            {% empty %}
+                <div class="empty-state">
+                    <h3>No featured images configured</h3>
+                    <p>Add featured image records to the database to populate this section.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}

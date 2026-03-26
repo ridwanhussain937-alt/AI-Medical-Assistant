@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+
+{% block title %}Server Error{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">Server Error</p>
+            <h1>We could not complete that request right now.</h1>
+            <p>An unexpected issue occurred while processing the page. The safest next step is to retry shortly.</p>
+        </div>
+    </section>
+
+    <section class="card narrow-card">
+        <div class="stack">
+            <p class="muted">If the problem continues, review the server logs and delivery/integration settings for OTP, AI services, and media processing.</p>
+            <div class="form-actions">
+                <a class="secondary-link" href="{% url 'index' %}">Return Home</a>
+                {% if user.is_authenticated %}
+                    <a class="secondary-link" href="{% url 'dashboard' %}">Open Dashboard</a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+{% endblock %}

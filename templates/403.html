@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Access Denied{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">Access Denied</p>
+            <h1>You do not have permission to access this page.</h1>
+            <p>This action is restricted. Return to a permitted workspace or sign in with an authorized account.</p>
+        </div>
+    </section>
+
+    <section class="card narrow-card">
+        <div class="stack">
+            <p class="muted">If you believe this is unexpected, contact the project administrator and confirm your account role and session status.</p>
+            <div class="form-actions">
+                <a class="secondary-link" href="{% url 'index' %}">Go to Home</a>
+                {% if user.is_authenticated %}
+                    <a class="secondary-link" href="{% url 'dashboard' %}">Open Dashboard</a>
+                {% else %}
+                    <a class="secondary-link" href="{% url 'login' %}">Sign In</a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+{% endblock %}

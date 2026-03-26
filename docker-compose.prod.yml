@@ -1,0 +1,59 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ai_medical_project}
+      POSTGRES_USER: ${POSTGRES_USER:-ai_medical_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-replace-me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  web:
+    build:
+      context: .
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      DJANGO_DEBUG: "false"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ai_medical_user}:${POSTGRES_PASSWORD:-replace-me}@db:5432/${POSTGRES_DB:-ai_medical_project}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-http://localhost,http://127.0.0.1}
+      DJANGO_SERVE_MEDIA: "true"
+      DJANGO_STATIC_ROOT: /app/staticfiles
+      DJANGO_MEDIA_ROOT: /app/media
+      DJANGO_SESSION_COOKIE_SECURE: ${DJANGO_SESSION_COOKIE_SECURE:-false}
+      DJANGO_CSRF_COOKIE_SECURE: ${DJANGO_CSRF_COOKIE_SECURE:-false}
+      DJANGO_SECURE_SSL_REDIRECT: ${DJANGO_SECURE_SSL_REDIRECT:-false}
+      DJANGO_SECURE_HSTS_SECONDS: ${DJANGO_SECURE_HSTS_SECONDS:-0}
+    command: bash start.sh
+    ports:
+      - "8000:8000"
+    volumes:
+      - media_data:/app/media
+      - model_artifacts:/app/medical_app/ml_models
+
+  worker:
+    build:
+      context: .
+    restart: unless-stopped
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      DJANGO_DEBUG: "false"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ai_medical_user}:${POSTGRES_PASSWORD:-replace-me}@db:5432/${POSTGRES_DB:-ai_medical_project}
+      DJANGO_MEDIA_ROOT: /app/media
+    command: /bin/sh -c "python manage.py migrate --noinput && python manage.py configure_site && python manage.py run_training_worker --continuous --poll-seconds $${TRAINING_WORKER_POLL_SECONDS:-15}"
+    volumes:
+      - media_data:/app/media
+      - model_artifacts:/app/medical_app/ml_models
+
+volumes:
+  postgres_data:
+  media_data:
+  model_artifacts:

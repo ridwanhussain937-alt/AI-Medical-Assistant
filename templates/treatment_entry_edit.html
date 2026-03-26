@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}Edit Treatment Entry{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">Treatment Management</p>
+            <h1>Edit treatment entry</h1>
+            <p>Update the treatment decision, doctor details, or contact information for this clinical record.</p>
+        </div>
+    </section>
+
+    <section class="card narrow-card">
+        <div class="card-header">
+            <div>
+                <h2>{{ analysis.title }}</h2>
+                <p class="card-sub">Editing entry for Dr. {{ treatment_entry.doctor_name }}.</p>
+            </div>
+        </div>
+
+        <form method="post" class="stack-form">
+            {% csrf_token %}
+
+            <label for="{{ form.doctor_name.id_for_label }}">Doctor Name</label>
+            {{ form.doctor_name }}
+            {% if form.doctor_name.errors %}
+                <div class="error">{{ form.doctor_name.errors|striptags }}</div>
+            {% endif %}
+
+            <label for="{{ form.doctor_id.id_for_label }}">Doctor ID</label>
+            {{ form.doctor_id }}
+            {% if form.doctor_id.errors %}
+                <div class="error">{{ form.doctor_id.errors|striptags }}</div>
+            {% endif %}
+
+            <label for="{{ form.specialization.id_for_label }}">Specialization</label>
+            {{ form.specialization }}
+            {% if form.specialization.errors %}
+                <div class="error">{{ form.specialization.errors|striptags }}</div>
+            {% endif %}
+
+            <label for="{{ form.contact_details.id_for_label }}">Contact Details</label>
+            {{ form.contact_details }}
+            {% if form.contact_details.errors %}
+                <div class="error">{{ form.contact_details.errors|striptags }}</div>
+            {% endif %}
+
+            <label for="{{ form.treatment_notes.id_for_label }}">Treatment Notes</label>
+            {{ form.treatment_notes }}
+            {% if form.treatment_notes.errors %}
+                <div class="error">{{ form.treatment_notes.errors|striptags }}</div>
+            {% endif %}
+
+            <div class="form-actions">
+                <button type="submit">Update Treatment Entry</button>
+                <a class="secondary-link" href="{% url 'analysis_detail' analysis.id %}">Cancel</a>
+            </div>
+        </form>
+    </section>
+{% endblock %}

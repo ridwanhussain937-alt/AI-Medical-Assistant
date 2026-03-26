@@ -1,0 +1,47 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="shieldLeft" x1="58" y1="58" x2="138" y2="214" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2C7BE5"/>
+      <stop offset="1" stop-color="#2B2BB5"/>
+    </linearGradient>
+    <linearGradient id="shieldRight" x1="138" y1="40" x2="228" y2="204" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DDF6FF"/>
+      <stop offset="1" stop-color="#66C8FF"/>
+    </linearGradient>
+    <radialGradient id="lensGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(128 126) rotate(90) scale(42)">
+      <stop stop-color="#7A2CFF"/>
+      <stop offset="0.45" stop-color="#1F65FF"/>
+      <stop offset="1" stop-color="#081947"/>
+    </radialGradient>
+    <linearGradient id="plusFill" x1="184" y1="82" x2="218" y2="128" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2EA6FF"/>
+      <stop offset="1" stop-color="#2E70E8"/>
+    </linearGradient>
+  </defs>
+
+  <path d="M128 32C103.2 49.8 77.4 58.6 56 58.6C56 137.6 89.8 198.6 128 224C128 160 128 96 128 32Z" fill="url(#shieldLeft)"/>
+  <path d="M128 32C152.8 49.8 178.6 58.6 200 58.6C200 137.6 166.2 198.6 128 224C128 160 128 96 128 32Z" fill="url(#shieldRight)"/>
+  <path d="M54 57C79.8 57 105.4 48.8 128 32L128 224C87.6 196.6 52 135.6 52 57C52.6 57 53.4 57 54 57Z" fill="url(#shieldLeft)" opacity="0.94"/>
+  <path d="M202 57C176.2 57 150.6 48.8 128 32L128 224C168.4 196.6 204 135.6 204 57C203.4 57 202.6 57 202 57Z" fill="url(#shieldRight)" opacity="0.98"/>
+
+  <path d="M184 82H206V104H226V126H206V148H184V126H164V104H184V82Z" fill="url(#plusFill)"/>
+
+  <circle cx="128" cy="126" r="52" fill="white"/>
+  <circle cx="128" cy="126" r="42" fill="#223071"/>
+  <circle cx="128" cy="126" r="35" fill="#0F1544"/>
+  <circle cx="128" cy="126" r="30" fill="url(#lensGlow)"/>
+  <circle cx="128" cy="126" r="18" fill="#1CC8F4" opacity="0.42"/>
+  <circle cx="128" cy="126" r="10" fill="#151A54" opacity="0.9"/>
+  <circle cx="149" cy="106" r="8" fill="white" opacity="0.92"/>
+  <circle cx="144" cy="102" r="3" fill="#9F5EFF"/>
+
+  <path d="M78 98H52" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  <path d="M86 82L68 66" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  <path d="M84 126H58" stroke="white" stroke-width="6" stroke-linecap="round"/>
+  <path d="M86 168L68 184" stroke="white" stroke-width="6" stroke-linecap="round"/>
+
+  <circle cx="52" cy="98" r="6" fill="white"/>
+  <circle cx="68" cy="66" r="6" fill="white"/>
+  <circle cx="58" cy="126" r="6" fill="white"/>
+  <circle cx="68" cy="184" r="6" fill="white"/>
+</svg>

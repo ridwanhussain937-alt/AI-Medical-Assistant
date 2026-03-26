@@ -1,0 +1,345 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Training Control Center{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/training_admin.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+    <section class="page-intro">
+        <div>
+            <p class="eyebrow">Developer Training Control</p>
+            <h1>Secure bulk-learning workspace for model refresh, upload validation, and sample datasets.</h1>
+            <p>
+                Only developer-approved admin users can open this workspace. Use it to upload large training batches,
+                preview row issues, trigger a fresh training run, and download ready-made example packs.
+            </p>
+        </div>
+    </section>
+
+    <section class="card section-card">
+        <div class="card-header">
+            <div>
+                <h2>Live Training Status</h2>
+                <p class="card-sub">Current queue, latest refresh state, and direct developer actions.</p>
+            </div>
+        </div>
+
+        <div class="profile-summary">
+            <div class="profile-summary-item">
+                <span class="summary-label">Training State</span>
+                <strong>{{ training_status_widget.status_label }}</strong>
+            </div>
+            <div class="profile-summary-item">
+                <span class="summary-label">Pending Queue</span>
+                <strong>{{ training_status_widget.pending_records }}</strong>
+            </div>
+            <div class="profile-summary-item">
+                <span class="summary-label">Approved Knowledge</span>
+                <strong>{{ training_status_widget.approved_knowledge_count }}/{{ training_status_widget.knowledge_count }}</strong>
+            </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Latest Upload</span>
+                    <strong>{{ training_status_widget.latest_upload_title }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                <span class="summary-label">Upload Status</span>
+                <strong>{{ training_status_widget.latest_upload_status }}</strong>
+            </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Active Version</span>
+                    <strong>{{ training_status_widget.active_version_label }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Latest Training Run</span>
+                    <strong>{{ training_status_widget.latest_training_run_status }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Queued Jobs</span>
+                    <strong>{{ training_status_widget.queued_run_count }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Last Trained</span>
+                    <strong>
+                        {% if training_status_widget.last_trained_at %}
+                            {{ training_status_widget.last_trained_at|date:"M d, Y H:i" }}
+                        {% else %}
+                        Not trained yet
+                    {% endif %}
+                </strong>
+            </div>
+        </div>
+
+        {% if latest_training_message %}
+            <div class="training-log-card">
+                <span class="summary-label">Latest Training Message</span>
+                <pre class="training-log">{{ latest_training_message }}</pre>
+            </div>
+        {% endif %}
+
+        <div class="info-banner">
+            Background training worker command:
+            <code>{{ training_status_widget.worker_command }}</code>
+            Run it in a separate terminal to process queued jobs without blocking HTTP requests.
+        </div>
+
+        <div class="action-links training-action-links">
+            <form class="inline-action-form" method="post" action="{{ train_now_url }}">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{% url 'training_control' %}">
+                <button type="submit">Train Now</button>
+            </form>
+            <a href="{{ sample_zip_url }}">Download Sample ZIP</a>
+            <a href="{{ template_download_url }}">Download CSV Template</a>
+            <a href="{{ admin_upload_url }}">Open Django Admin</a>
+        </div>
+    </section>
+
+    <div class="dashboard-grid">
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Bulk Upload Center</h2>
+                    <p class="card-sub">Upload one CSV or ZIP batch, track progress, and preview row-level issues instantly.</p>
+                </div>
+            </div>
+
+            <form
+                id="training-upload-form"
+                class="stack-form"
+                action="{{ upload_post_url }}"
+                method="post"
+                enctype="multipart/form-data"
+            >
+                {% csrf_token %}
+
+                <div class="settings-field-grid">
+                    <div class="form-field">
+                        <label for="training-title">Batch Title</label>
+                        <input id="training-title" type="text" name="title" placeholder="Semester respiratory batch">
+                    </div>
+                    <div class="form-field">
+                        <label for="training-source-label">Source Label</label>
+                        <input id="training-source-label" type="text" name="source_label" placeholder="doctor-round-upload">
+                    </div>
+                </div>
+
+                <div class="form-field">
+                    <label for="training-dataset-file">Dataset File</label>
+                    <input id="training-dataset-file" type="file" name="dataset_file" accept=".csv,.zip" required>
+                    <p class="field-note">Use a single CSV or a ZIP containing one CSV. Large batches are supported for admin-only retraining.</p>
+                </div>
+
+                <label class="checkbox-row">
+                    <input type="checkbox" name="auto_retrain_requested" value="true" checked>
+                    Queue auto-retraining after approved rows are imported
+                </label>
+
+                <div class="form-actions">
+                    <button id="training-upload-submit" type="submit">Upload and Process</button>
+                    <a class="secondary-link" href="{{ sample_zip_url }}">Download Sample ZIP</a>
+                    <a class="secondary-link" href="{{ admin_training_runs_url }}">Open Training History</a>
+                </div>
+
+                <div id="training-upload-progress" class="progress-item training-progress-shell is-hidden" aria-live="polite">
+                    <div class="progress-meta">
+                        <strong id="training-upload-progress-label">Preparing upload...</strong>
+                        <span id="training-upload-progress-value">0%</span>
+                    </div>
+                    <div class="progress-track">
+                        <div id="training-upload-progress-fill" class="progress-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+            </form>
+
+            <div id="training-upload-feedback" class="upload-feedback-card is-hidden">
+                <div class="card-header">
+                    <div>
+                        <h3>Upload Result</h3>
+                        <p class="card-sub" id="training-upload-feedback-message"></p>
+                    </div>
+                </div>
+
+                <div class="profile-summary">
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Status</span>
+                        <strong id="training-result-status">Pending</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Created Rows</span>
+                        <strong id="training-result-created">0</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Skipped Rows</span>
+                        <strong id="training-result-skipped">0</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Approved Rows</span>
+                        <strong id="training-result-approved">0</strong>
+                    </div>
+                </div>
+
+                <div class="warning-preview-card">
+                    <div class="card-header">
+                        <div>
+                            <h3>Row Error Preview</h3>
+                            <p class="card-sub">First warning rows returned by the parser after upload processing.</p>
+                        </div>
+                    </div>
+                    <ul id="training-warning-list" class="warning-list"></ul>
+                    <div id="training-error-report-links" class="action-links training-action-links is-hidden">
+                        <a id="training-error-report-link" href="#">Download Error CSV</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Sample Archive Contents</h2>
+                    <p class="card-sub">Prebuilt files for developer testing, demo imports, and warning-preview validation.</p>
+                </div>
+            </div>
+
+            <div class="session-list">
+                {% for sample in sample_archive_manifest %}
+                    <article class="session-card">
+                        <strong>{{ sample.filename }}</strong>
+                        <span>{{ sample.description }}</span>
+                    </article>
+                {% endfor %}
+            </div>
+
+            <div class="action-links">
+                <a href="{{ sample_zip_url }}">Download Sample ZIP</a>
+                <a href="{{ template_download_url }}">Download CSV Template</a>
+                <a href="{{ admin_knowledge_url }}">Open Knowledge Entries</a>
+            </div>
+        </section>
+    </div>
+
+    <section class="card section-card">
+        <div class="card-header">
+            <div>
+                <h2>Recent Upload Activity</h2>
+                <p class="card-sub">Latest batches with summary counts, retraining intent, and warning previews.</p>
+            </div>
+        </div>
+
+        <div class="session-list">
+            {% for upload in recent_uploads %}
+                <article class="session-card upload-history-card">
+                    <div class="upload-history-top">
+                        <div>
+                            <strong>{{ upload.title }}</strong>
+                            <div class="table-subtext">{{ upload.source_label }} &bull; by {{ upload.created_by }}</div>
+                        </div>
+                        <span class="upload-status-pill upload-status-{{ upload.status_label|slugify }}">{{ upload.status_label }}</span>
+                    </div>
+
+                    <div class="profile-summary">
+                        <div class="profile-summary-item">
+                            <span class="summary-label">Total Rows</span>
+                            <strong>{{ upload.total_rows }}</strong>
+                        </div>
+                        <div class="profile-summary-item">
+                            <span class="summary-label">Created Rows</span>
+                            <strong>{{ upload.created_rows }}</strong>
+                        </div>
+                        <div class="profile-summary-item">
+                            <span class="summary-label">Skipped Rows</span>
+                            <strong>{{ upload.skipped_rows }}</strong>
+                        </div>
+                        <div class="profile-summary-item">
+                            <span class="summary-label">Auto Retrain</span>
+                            <strong>{% if upload.auto_retrain_requested %}Queued if approved{% else %}Disabled{% endif %}</strong>
+                        </div>
+                    </div>
+
+                    {% if upload.processing_notes %}
+                        <p class="field-note">{{ upload.processing_notes }}</p>
+                    {% endif %}
+
+                    {% if upload.warnings %}
+                        <div class="warning-preview-card">
+                            <strong>Row Error Preview</strong>
+                            <ul class="warning-list">
+                                {% for warning in upload.warnings %}
+                                    <li>{{ warning }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% if upload.warning_count > upload.warnings|length %}
+                                <p class="field-note">Additional warnings are stored in the upload summary for this batch.</p>
+                            {% endif %}
+                            {% if upload.error_report_url %}
+                                <div class="action-links training-action-links">
+                                    <a href="{{ upload.error_report_url }}">Download Error CSV</a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </article>
+            {% empty %}
+                <div class="empty-state">
+                    <h3>No uploads yet</h3>
+                    <p>Use the bulk upload form above or open the Django admin upload manager to add the first training batch.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="card section-card">
+        <div class="card-header">
+            <div>
+                <h2>Training Version History</h2>
+                <p class="card-sub">Recent refreshes with status, active version tracking, and quality metrics snapshots.</p>
+            </div>
+            <a class="secondary-link" href="{{ admin_training_runs_url }}">Open Full History</a>
+        </div>
+
+        <div class="session-list">
+            {% for run in recent_training_runs %}
+                <article class="session-card upload-history-card">
+                    <div class="upload-history-top">
+                        <div>
+                            <strong>{{ run.version_label|default:"Version pending" }}</strong>
+                            <div class="table-subtext">{{ run.run_reason }}</div>
+                        </div>
+                        <span class="upload-status-pill upload-status-{{ run.status|slugify }}">{{ run.get_status_display }}</span>
+                    </div>
+
+                    <div class="profile-summary">
+                        <div class="profile-summary-item">
+                            <span class="summary-label">Triggered By</span>
+                            <strong>{% if run.triggered_by %}{{ run.triggered_by.get_username }}{% else %}System{% endif %}</strong>
+                        </div>
+                        <div class="profile-summary-item">
+                            <span class="summary-label">Started</span>
+                            <strong>{{ run.started_at|date:"M d, Y H:i" }}</strong>
+                        </div>
+                        <div class="profile-summary-item">
+                            <span class="summary-label">Classifier Accuracy</span>
+                            <strong>{% if run.classifier_accuracy != None %}{{ run.classifier_accuracy }}%{% else %}Not available{% endif %}</strong>
+                        </div>
+                        <div class="profile-summary-item">
+                            <span class="summary-label">QA Hit@1</span>
+                            <strong>{% if run.qa_hit_rate_at_1 != None %}{{ run.qa_hit_rate_at_1 }}%{% else %}Not available{% endif %}</strong>
+                        </div>
+                    </div>
+
+                    {% if run.is_active_version %}
+                        <div class="info-banner">This run is the current active model version for production predictions.</div>
+                    {% endif %}
+                </article>
+            {% empty %}
+                <div class="empty-state">
+                    <h3>No training versions yet</h3>
+                    <p>Run the first training refresh to build version history and quality snapshots.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+{% endblock %}

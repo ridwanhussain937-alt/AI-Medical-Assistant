@@ -1,0 +1,35 @@
+<section class="card">
+    <div class="card-header">
+        <div>
+            <h2>Current Medical Report</h2>
+            <p class="card-sub">Paste current report findings or upload the latest report for AI-supported interpretation.</p>
+        </div>
+    </div>
+    <div class="stack">
+        <textarea
+            class="auto-expand"
+            name="report_notes"
+            placeholder="Paste report findings, observations, lab values, or diagnostic notes here."
+        >{{ submitted_report_notes }}</textarea>
+        <input type="file" name="report_file" accept=".txt,.csv,.pdf">
+        <p class="field-note">Text and CSV files are analyzed directly. PDF files are saved with the record for review.</p>
+    </div>
+</section>
+
+<section class="card">
+    <div class="card-header">
+        <div>
+            <h2>Previous Report Comparison</h2>
+            <p class="card-sub">Upload the earlier report together with the latest report to calculate disease reduction and remaining percentage.</p>
+        </div>
+    </div>
+    <div class="stack">
+        <textarea
+            class="auto-expand"
+            name="previous_report_notes"
+            placeholder="Paste the previous report findings here if you want a direct old-vs-new comparison."
+        >{{ submitted_previous_report_notes }}</textarea>
+        <input type="file" name="previous_report_file" accept=".txt,.csv,.pdf">
+        <p class="field-note">For percentage comparison, include the disease percentage in the note or in a text/CSV report. Example: 80% disease involvement.</p>
+    </div>
+</section>

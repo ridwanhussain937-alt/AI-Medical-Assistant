@@ -1,0 +1,15 @@
+.git
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.env
+.env.*
+!.env.example
+db.sqlite3
+media/
+staticfiles/
+_test_scratch/
+tmp*/

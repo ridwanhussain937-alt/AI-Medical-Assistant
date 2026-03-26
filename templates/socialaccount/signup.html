@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Complete Google Sign-In{% endblock %}
+
+{% block content %}
+    <section class="auth-wrapper">
+        <div class="container">
+            <div class="auth-brand">
+                <img
+                    class="auth-logo"
+                    src="{% static 'img/medical-assistant-logo.svg' %}"
+                    alt="AI Medical Assistant logo"
+                >
+                <div>
+                    <p class="eyebrow">AI Medical Assistant</p>
+                    <p class="auth-brand-copy">Complete your Google sign-in</p>
+                </div>
+            </div>
+
+            <p class="eyebrow">One Final Step</p>
+            <h1>Finish setting up your access</h1>
+            <p class="auth-subtitle">We pulled in your Google profile. Confirm the remaining details below so we can create your secure clinical workspace.</p>
+
+            <form method="post" class="stack-form">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="error">{{ form.non_field_errors|striptags }}</div>
+                {% endif %}
+
+                {% if form.email %}
+                    <label for="{{ form.email.id_for_label }}">Email ID</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="error">{{ form.email.errors|striptags }}</div>
+                    {% endif %}
+                {% endif %}
+
+                {% if form.username %}
+                    <label for="{{ form.username.id_for_label }}">Username</label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="error">{{ form.username.errors|striptags }}</div>
+                    {% endif %}
+                {% endif %}
+
+                <button type="submit">Complete Sign-In</button>
+            </form>
+
+            <p class="help-text">This step only appears when Google sign-in needs one extra confirmation.</p>
+        </div>
+    </section>
+{% endblock %}

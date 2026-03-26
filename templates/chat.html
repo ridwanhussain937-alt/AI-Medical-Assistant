@@ -1,0 +1,159 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Patient Chat{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/chat.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">Follow-up Chat</p>
+            <h1>Continue the clinical conversation with a more focused workspace.</h1>
+            <p>
+                Ask follow-up questions, clarify symptoms, and keep supporting attachments together with the patient discussion.
+            </p>
+        </div>
+        <a class="secondary-link" href="{% url 'history' %}">Open History</a>
+    </section>
+
+    <div class="chat-layout">
+        <section class="card wide chat-workspace">
+            <div class="chat-toolbar">
+                <div>
+                    <h2>Conversation</h2>
+                    <p class="card-sub">Review prior responses and continue the clinical thread with clear follow-up context.</p>
+                </div>
+                <div class="chat-status-list">
+                    <span class="status-pill chat-status-pill">AI Assisted</span>
+                    <span class="status-pill chat-status-pill">Attachment Ready</span>
+                </div>
+            </div>
+
+            <div class="chat-surface">
+                <div class="chat-messages" id="chatBox">
+                    {% if history %}
+                        {% for item in history %}
+                            <article class="message chat-message-card {{ item.role }}">
+                                <div class="meta chat-message-meta">
+                                    <span class="chat-role">{{ item.role|title }}</span>
+                                    {% if item.timestamp %}
+                                        <span>{{ item.timestamp }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="text chat-copy">{{ item.text|default:"(no text)"|linebreaksbr }}</div>
+
+                                {% if item.attachment_url %}
+                                    <a
+                                        class="attachment-link"
+                                        href="{{ item.attachment_url }}"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        Open attachment
+                                    </a>
+                                {% endif %}
+                            </article>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state chat-empty-state">
+                            <h3>No conversation yet</h3>
+                            <p>Start with symptoms, medications, report findings, or the next question you want the assistant to help organize.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <section class="chat-composer-card">
+                    <div class="card-header">
+                        <div>
+                            <h2>Send a Message</h2>
+                            <p class="card-sub">Share a follow-up question or upload a supporting image or PDF for context.</p>
+                        </div>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data" class="chat-form">
+                        {% csrf_token %}
+
+                        {% if form.non_field_errors %}
+                            <div class="error">{{ form.non_field_errors|striptags }}</div>
+                        {% endif %}
+
+                        <label for="{{ form.message.id_for_label }}">Clinical Message</label>
+                        {{ form.message }}
+                        {% if form.message.errors %}
+                            <div class="error">{{ form.message.errors|striptags }}</div>
+                        {% endif %}
+
+                        <div class="chat-upload-box">
+                            <label for="{{ form.attachment.id_for_label }}">Attachment</label>
+                            {{ form.attachment }}
+                            <p class="field-note">Accepted formats: JPG, JPEG, PNG, or PDF up to 5 MB.</p>
+                            {% if form.attachment.errors %}
+                                <div class="error">{{ form.attachment.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="chat-composer-actions">
+                            <p class="field-note">Keep messages concise and include duration, severity, and any recent changes when relevant.</p>
+                            <button type="submit">Send Message</button>
+                        </div>
+                    </form>
+                </section>
+            </div>
+        </section>
+
+        <aside class="chat-sidebar">
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Workspace Summary</h2>
+                        <p class="card-sub">A quick snapshot of the current follow-up session.</p>
+                    </div>
+                </div>
+
+                <div class="chat-stats">
+                    <div class="chat-stat-item">
+                        <span class="summary-label">Messages</span>
+                        <strong>{{ history|length }}</strong>
+                    </div>
+                    <div class="chat-stat-item">
+                        <span class="summary-label">Attachments</span>
+                        <strong>{{ attachment_count }}</strong>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Best Practices</h2>
+                        <p class="card-sub">Use the chat more effectively with structured clinical follow-up.</p>
+                    </div>
+                </div>
+
+                <ul class="chat-guidance-list">
+                    <li>State what changed since the previous consultation.</li>
+                    <li>Include symptom duration, severity, and current medications.</li>
+                    <li>Attach only the most relevant image or PDF for quicker review.</li>
+                    <li>Use the history page to revisit earlier assistant responses.</li>
+                </ul>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Quick Actions</h2>
+                        <p class="card-sub">Navigate to adjacent clinical workflows.</p>
+                    </div>
+                </div>
+
+                <div class="stack">
+                    <a class="secondary-link secondary-link-block" href="{% url 'index' %}">Go to Clinical Intake</a>
+                    <a class="secondary-link secondary-link-block" href="{% url 'history' %}">Review Conversation History</a>
+                </div>
+            </section>
+        </aside>
+    </div>
+{% endblock %}

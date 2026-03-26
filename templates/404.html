@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block title %}Page Not Found{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">Page Not Found</p>
+            <h1>The page you requested is not available.</h1>
+            <p>The link may be outdated, incomplete, or the resource may have been moved to a different location.</p>
+        </div>
+    </section>
+
+    <section class="card narrow-card">
+        <div class="stack">
+            <p class="muted">Use the main navigation to return to a supported workflow such as the home page, dashboard, chat workspace, or history.</p>
+            <div class="form-actions">
+                <a class="secondary-link" href="{% url 'index' %}">Go to Home</a>
+                <a class="secondary-link" href="{% url 'chat' %}">Open Chat</a>
+            </div>
+        </div>
+    </section>
+{% endblock %}

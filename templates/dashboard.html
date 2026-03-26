@@ -1,0 +1,636 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/dashboard.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+    <section class="page-intro">
+        <div>
+            <p class="eyebrow">Clinical Command Center</p>
+            <h1>Usable, clinical, and smart workspace for day-to-day patient intelligence.</h1>
+            <p>
+                Track active cases, open quick actions, inspect AI findings, review report comparison, and monitor
+                alerts and analytics from one professional dashboard.
+            </p>
+        </div>
+    </section>
+
+    <div class="stats-grid">
+        {% for item in dashboard_stats %}
+            <article class="stat-card">
+                <p class="stat-label">{{ item.label }}</p>
+                <h2>{{ item.value }}</h2>
+                <p class="stat-helper">{{ item.helper }}</p>
+            </article>
+        {% endfor %}
+    </div>
+
+    <section class="card section-card">
+        <div class="card-header">
+            <div>
+                <h2>Quick Actions</h2>
+                <p class="card-sub">Jump into the primary workflows without hunting through menus.</p>
+            </div>
+        </div>
+
+        <div class="quick-action-grid">
+            {% for action in quick_actions %}
+                <a class="quick-action-card" href="{{ action.url }}">
+                    <span class="quick-action-badge">{{ forloop.counter|stringformat:"02d" }}</span>
+                    <h3>{{ action.title }}</h3>
+                    <p>{{ action.description }}</p>
+                    <span class="quick-action-link">{{ action.action_label }}</span>
+                </a>
+            {% endfor %}
+        </div>
+    </section>
+
+    {% if training_status_widget %}
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Live Training Status</h2>
+                    <p class="card-sub">Developer-only AI training controls, upload readiness, active version, and latest refresh state.</p>
+                </div>
+            </div>
+
+            <div class="profile-summary">
+                <div class="profile-summary-item">
+                    <span class="summary-label">Training State</span>
+                    <strong>{{ training_status_widget.status_label }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Pending Queue</span>
+                    <strong>{{ training_status_widget.pending_records }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Knowledge Entries</span>
+                    <strong>{{ training_status_widget.approved_knowledge_count }}/{{ training_status_widget.knowledge_count }} approved</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Latest Upload</span>
+                    <strong>{{ training_status_widget.latest_upload_status }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Upload Batch</span>
+                    <strong>{{ training_status_widget.latest_upload_title }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Active Version</span>
+                    <strong>{{ training_status_widget.active_version_label }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Latest Training Run</span>
+                    <strong>{{ training_status_widget.latest_training_run_status }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Queued Jobs</span>
+                    <strong>{{ training_status_widget.queued_run_count }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Last Trained</span>
+                    <strong>
+                        {% if training_status_widget.last_trained_at %}
+                            {{ training_status_widget.last_trained_at|date:"M d, Y H:i" }}
+                        {% else %}
+                            Not trained yet
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+
+            <div class="info-banner">
+                Background processing is enabled for heavy model refresh. Keep a worker running with
+                <code>{{ training_status_widget.worker_command }}</code>
+                so queued jobs are consumed automatically.
+            </div>
+
+            <div class="action-links">
+                <form class="inline-action-form" method="post" action="{{ training_status_widget.train_now_url }}">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{% url 'dashboard' %}">
+                    <button type="submit">Train Now</button>
+                </form>
+                <a href="{{ training_status_widget.training_center_url }}">Open Training Center</a>
+                <a href="{{ training_status_widget.admin_upload_url }}">Open Upload Manager</a>
+                <a href="{{ training_status_widget.admin_knowledge_url }}">Open Knowledge Entries</a>
+                <a href="{{ training_status_widget.admin_config_url }}">Open AI Configuration</a>
+                <a href="{{ training_status_widget.admin_training_runs_url }}">Open Training History</a>
+                <a href="{{ training_status_widget.sample_zip_url }}">Download Sample ZIP</a>
+                <a href="{{ training_status_widget.template_download_url }}">Download Import Template</a>
+                {% if training_status_widget.latest_upload_error_report_url %}
+                    <a href="{{ training_status_widget.latest_upload_error_report_url }}">Latest Error CSV</a>
+                {% endif %}
+            </div>
+        </section>
+    {% endif %}
+
+    <div class="dashboard-grid dashboard-grid-focus">
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>AI Insights</h2>
+                    <p class="card-sub">Latest diagnosis, risk posture, and preference-aware response profile.</p>
+                </div>
+            </div>
+
+            {% if latest_analysis %}
+                <div class="insight-grid">
+                    <article class="insight-card insight-card-primary">
+                        <span class="summary-label">Latest Diagnosis</span>
+                        <strong>{{ latest_analysis.predicted_condition|default:"General review required" }}</strong>
+                        <p>{{ analysis_comparison.message }}</p>
+                    </article>
+                    <article class="insight-card">
+                        <span class="summary-label">Risk Level</span>
+                        <strong>{{ latest_analysis.risk_level|default:"Not assigned" }}</strong>
+                        <p>Confidence {{ latest_analysis.confidence_score|floatformat:2 }} using {{ latest_analysis.model_source }}.</p>
+                    </article>
+                    <article class="insight-card">
+                        <span class="summary-label">Response Profile</span>
+                        <strong>{{ current_user_summary.response_style|title }}</strong>
+                        <p>{{ current_user_summary.language_preference|title }} output with clinician-friendly phrasing.</p>
+                    </article>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <h3>No saved analyses yet</h3>
+                    <p>Run a patient intake from the home page to unlock AI insight cards and progression tracking.</p>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Alerts</h2>
+                    <p class="card-sub">Fast signals that help you spot risk, model limitations, and account activity.</p>
+                </div>
+            </div>
+
+            <div class="alert-list">
+                {% for alert in alerts %}
+                    <article class="alert-card alert-{{ alert.severity }}">
+                        <strong>{{ alert.title }}</strong>
+                        <p>{{ alert.message }}</p>
+                    </article>
+                {% empty %}
+                    <div class="empty-state">
+                        <h3>No active alerts</h3>
+                        <p>Your current case mix and account activity do not require immediate attention.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <section class="card section-card">
+        <div class="card-header">
+            <div>
+                <h2>Analytics</h2>
+                <p class="card-sub">Lightweight pie-style analytics for risk, condition mix, and model behavior.</p>
+            </div>
+        </div>
+
+        <div class="donut-grid">
+            {% for chart in analytics_charts %}
+                <article class="donut-card">
+                    <div class="donut-head">
+                        <h3>{{ chart.title }}</h3>
+                        <p>{{ chart.subtitle }}</p>
+                    </div>
+                    <div class="donut-layout">
+                        <div class="analytics-donut" style="--donut-bg: {{ chart.background }};">
+                            <div class="analytics-donut-center">
+                                <strong>{{ chart.center_value }}</strong>
+                                <span>{{ chart.center_caption }}</span>
+                            </div>
+                        </div>
+                        <div class="donut-legend">
+                            {% for item in chart.legend %}
+                                <div class="donut-legend-row">
+                                    <span class="donut-dot" style="background: {{ item.color }};"></span>
+                                    <span>{{ item.label }}</span>
+                                    <strong>{{ item.percentage }}</strong>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <div class="dashboard-grid">
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Reports &amp; Comparison</h2>
+                    <p class="card-sub">Current vs previous disease burden and latest report interpretation snapshot.</p>
+                </div>
+                <a class="secondary-link" href="{% url 'report_intake' %}">Open Reports</a>
+            </div>
+
+            {% if latest_analysis %}
+                <div class="profile-summary">
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Latest Record</span>
+                        <strong>{{ latest_analysis.created_at|date:"M d, Y H:i" }}</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Progression</span>
+                        <strong>{{ analysis_comparison.status }}</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">{{ analysis_comparison.metric_label|default:"Condition Delta" }}</span>
+                        <strong>{{ analysis_comparison.delta_label|default:analysis_comparison.delta }}</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Current Disease Level</span>
+                        <strong>
+                            {% if latest_analysis.disease_percentage != None %}
+                                {{ latest_analysis.disease_percentage|floatformat:0 }}%
+                            {% else %}
+                                Not available
+                            {% endif %}
+                        </strong>
+                    </div>
+                </div>
+
+                {% if analysis_comparison.has_percentage_data %}
+                    <div class="comparison-visual-grid comparison-visual-grid-compact">
+                        <div class="comparison-pie-wrap">
+                            <div
+                                class="comparison-pie"
+                                style="--comparison-fill: {{ analysis_comparison.chart_fill_degrees }}deg;"
+                                aria-label="Disease reduction versus remaining percentage"
+                            >
+                                <div class="comparison-pie-center">
+                                    <strong>{{ analysis_comparison.current_percentage|floatformat:0 }}%</strong>
+                                    <span>Current level</span>
+                                </div>
+                            </div>
+
+                            <div class="comparison-legend">
+                                <div class="comparison-legend-item">
+                                    <span class="comparison-swatch comparison-swatch-change"></span>
+                                    <span>{{ analysis_comparison.change_label }}: {{ analysis_comparison.change_percentage|floatformat:0 }}%</span>
+                                </div>
+                                <div class="comparison-legend-item">
+                                    <span class="comparison-swatch comparison-swatch-remaining"></span>
+                                    <span>Remaining: {{ analysis_comparison.remaining_percentage|floatformat:0 }}%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="insight-note-card">
+                            <span class="summary-label">Clinical Interpretation</span>
+                            <strong>{{ analysis_comparison.message }}</strong>
+                            <p>Use the dedicated reports page for full comparison inputs and structured follow-up guidance.</p>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="info-banner">
+                        Add previous report details to unlock old-vs-new percentage comparison for this patient journey.
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="empty-state">
+                    <h3>No report comparison yet</h3>
+                    <p>Open the reports workspace and analyze a current report to start building comparison data.</p>
+                </div>
+            {% endif %}
+        </section>
+
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Patient History</h2>
+                    <p class="card-sub">Recent timeline-ready cases with AI result, doctor context, and drill-down access.</p>
+                </div>
+                <a class="secondary-link" href="{% url 'history' %}">Open Full History</a>
+            </div>
+
+            <div class="timeline-preview">
+                {% for record in history_highlights %}
+                    <article class="timeline-preview-card">
+                        <div class="timeline-marker"></div>
+                        <div class="timeline-preview-body">
+                            <div class="timeline-preview-top">
+                                <div>
+                                    <strong>{{ record.analysis.title|default:"Clinical Record" }}</strong>
+                                    <div class="table-subtext">{{ record.analysis.created_at|date:"M d, Y H:i" }}</div>
+                                </div>
+                                <span class="risk-pill risk-pill-{{ record.risk_css }}">{{ record.analysis.risk_level|default:"Unknown" }}</span>
+                            </div>
+                            <p class="timeline-condition">{{ record.analysis.predicted_condition|default:"General review required" }}</p>
+                            <p class="timeline-summary">{{ record.doctor_note }}</p>
+                            <div class="timeline-meta">{{ record.doctor_label }}</div>
+                            <a class="secondary-link" href="{{ record.view_url }}">View / Compare</a>
+                        </div>
+                    </article>
+                {% empty %}
+                    <div class="empty-state">
+                        <h3>No timeline records yet</h3>
+                        <p>New analyses will appear here after symptom intake or report review is completed.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <div class="dashboard-grid">
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Your Session Overview</h2>
+                    <p class="card-sub">Current identity, locations, and active device footprint for this account.</p>
+                </div>
+            </div>
+
+            <div class="profile-summary">
+                <div class="profile-summary-item">
+                    <span class="summary-label">Member Name</span>
+                    <strong>{{ current_user_summary.display_name }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">User ID</span>
+                    <strong>{{ current_user_summary.user_id }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Role</span>
+                    <strong>{{ current_user_summary.role }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Mobile</span>
+                    <strong>{{ current_user_summary.mobile_number }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Active Devices</span>
+                    <strong>{{ current_user_summary.device_count }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Current Locations</span>
+                    <strong>{{ current_user_summary.locations|join:", " }}</strong>
+                </div>
+            </div>
+
+            <div class="session-list dashboard-session-list">
+                {% for activity in current_user_logins %}
+                    <article class="session-card">
+                        <strong>{{ activity.device_name|default:"Unknown device" }}</strong>
+                        <span>{{ activity.browser_name|default:"Browser not detected" }} &bull; {{ activity.location_label|default:"Location unavailable" }}</span>
+                        <small>Last seen {{ activity.last_seen|date:"M d, Y H:i" }}</small>
+                    </article>
+                {% empty %}
+                    <div class="empty-state">
+                        <h3>No active sessions found</h3>
+                        <p>Your device activity list will populate after authenticated requests are recorded.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Alerts &amp; Analytics Feed</h2>
+                    <p class="card-sub">Seven-day login movement and recent condition-count trend.</p>
+                </div>
+            </div>
+
+            <div class="mini-analytics-grid">
+                <div>
+                    <h3 class="mini-analytics-title">Login Activity</h3>
+                    <div class="bar-chart">
+                        {% for point in login_chart_data %}
+                            <div class="bar-column">
+                                <span class="bar-value">{{ point.count }}</span>
+                                <div class="bar-track">
+                                    <div class="bar-fill" style="height: {{ point.height }}px;"></div>
+                                </div>
+                                <span class="bar-label">{{ point.label }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="mini-analytics-title">Case Trend</h3>
+                    <div class="bar-chart">
+                        {% for point in analysis_chart_data %}
+                            <div class="bar-column">
+                                <span class="bar-value">{{ point.count }}</span>
+                                <div class="bar-track">
+                                    <div class="bar-fill secondary" style="height: {{ point.height }}px;"></div>
+                                </div>
+                                <span class="bar-label">{{ point.label }}</span>
+                            </div>
+                        {% empty %}
+                            <div class="empty-state">
+                                <h3>No analysis trend yet</h3>
+                                <p>Case trend bars appear after multiple clinical records are saved.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <div class="dashboard-grid">
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Recent Clinical Analyses</h2>
+                    <p class="card-sub">Saved report and image analyses with quick drill-down access.</p>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Record</th>
+                            <th>Condition</th>
+                            <th>Risk</th>
+                            <th>Trend</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for analysis in recent_analyses %}
+                            <tr>
+                                <td>
+                                    <strong>{{ analysis.title }}</strong>
+                                    <div class="table-subtext">{{ analysis.created_at|date:"M d, Y H:i" }}</div>
+                                </td>
+                                <td>{{ analysis.predicted_condition }}</td>
+                                <td>{{ analysis.risk_level }}</td>
+                                <td>{{ analysis.progression_status }}</td>
+                                <td><a href="{% url 'analysis_detail' analysis.id %}">View Record</a></td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5">No medical analyses saved yet.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>Treatment Knowledge Feed</h2>
+                    <p class="card-sub">Privacy-safe summaries from doctor-reviewed treatments currently contributing to ML training.</p>
+                </div>
+            </div>
+
+            <div class="session-list">
+                {% for treatment in public_treatment_summaries %}
+                    <article class="session-card">
+                        <strong>{{ treatment.condition }} ({{ treatment.specialization }})</strong>
+                        <span>{{ treatment.summary }}</span>
+                        <small>Training quality {{ treatment.quality_score }}/100 &bull; {{ treatment.updated_at|date:"M d, Y H:i" }}</small>
+                    </article>
+                {% empty %}
+                    <div class="empty-state">
+                        <h3>No treatment summaries available yet</h3>
+                        <p>Doctor-reviewed treatment notes will appear here as the supervised dataset grows.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+
+    <section class="card section-card">
+        <div class="card-header">
+            <div>
+                <h2>Model Training Pipeline</h2>
+                <p class="card-sub">Training readiness, dataset quality, and the latest evaluation checkpoint.</p>
+            </div>
+        </div>
+
+        <div class="profile-summary training-evaluation-grid">
+            <div class="profile-summary-item">
+                <span class="summary-label">Dataset Records</span>
+                <strong>{{ training_dataset_summary.record_count }}</strong>
+            </div>
+            <div class="profile-summary-item">
+                <span class="summary-label">Approved for Training</span>
+                <strong>{{ training_dataset_summary.approved_count }}</strong>
+            </div>
+            <div class="profile-summary-item">
+                <span class="summary-label">Average Quality</span>
+                <strong>{{ training_dataset_summary.average_quality }}/100</strong>
+            </div>
+            <div class="profile-summary-item">
+                <span class="summary-label">Latest Sync</span>
+                <strong>
+                    {% if training_dataset_summary.latest_synced_at %}
+                        {{ training_dataset_summary.latest_synced_at|date:"M d, Y H:i" }}
+                    {% else %}
+                        No sync yet
+                    {% endif %}
+                </strong>
+            </div>
+            <div class="profile-summary-item">
+                <span class="summary-label">Evaluation Split</span>
+                <strong>
+                    {% if model_evaluation_summary %}
+                        {{ model_evaluation_summary.train_count }} train / {{ model_evaluation_summary.test_count }} test
+                    {% else %}
+                        80% train / 20% test
+                    {% endif %}
+                </strong>
+            </div>
+            <div class="profile-summary-item">
+                <span class="summary-label">Accuracy</span>
+                <strong>
+                    {% if model_evaluation_summary %}
+                        {{ model_evaluation_summary.accuracy_percent }}%
+                    {% else %}
+                        Not evaluated yet
+                    {% endif %}
+                </strong>
+            </div>
+            <div class="profile-summary-item">
+                <span class="summary-label">Macro F1</span>
+                <strong>
+                    {% if model_evaluation_summary %}
+                        {{ model_evaluation_summary.macro_f1 }}
+                    {% else %}
+                        Awaiting evaluation
+                    {% endif %}
+                </strong>
+            </div>
+            <div class="profile-summary-item">
+                <span class="summary-label">Test Records</span>
+                <strong>
+                    {% if model_evaluation_summary %}
+                        {{ model_evaluation_summary.correct_predictions }}/{{ model_evaluation_summary.test_count }} correct
+                    {% else %}
+                        Add more reviewed cases
+                    {% endif %}
+                </strong>
+            </div>
+        </div>
+    </section>
+
+    {% if user.is_staff %}
+        <section class="card management-card section-card">
+            <div class="card-header">
+                <div>
+                    <h2>User Management</h2>
+                    <p class="card-sub">Review members, roles, device footprint, and account actions.</p>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table class="dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Member Name / User ID</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Devices</th>
+                            <th>Locations</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in user_rows %}
+                            <tr>
+                                <td>
+                                    <strong>{{ row.display_name }}</strong>
+                                    <div class="table-subtext">{{ row.user_id }}</div>
+                                </td>
+                                <td>{{ row.role }}</td>
+                                <td>
+                                    <span class="status-pill {% if row.status == 'Online' %}online{% else %}offline{% endif %}">
+                                        {{ row.status }}
+                                    </span>
+                                </td>
+                                <td>{{ row.device_count }}</td>
+                                <td>{{ row.locations|join:", " }}</td>
+                                <td>
+                                    <div class="action-links">
+                                        <a href="{{ row.view_url }}">View</a>
+                                        <a href="{{ row.edit_url }}">Edit</a>
+                                        <a href="{{ row.delete_url }}">Delete</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    {% endif %}
+{% endblock %}

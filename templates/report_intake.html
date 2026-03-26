@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Reports & Comparison{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/upload.js' %}" defer></script>
+{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">Reports Workspace</p>
+            <h1>Analyze current reports and compare previous records from one focused page.</h1>
+            <p>
+                Upload or paste the latest report, add an earlier report when needed, and generate a structured report interpretation with comparison insights.
+            </p>
+        </div>
+        <a class="secondary-link" href="{% url 'index' %}">Back to Clinical Intake</a>
+    </section>
+
+    {% if error_message %}
+        <div class="flash flash-error">{{ error_message }}</div>
+    {% endif %}
+
+    <form id="mainForm" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <div class="report-tools-grid report-tools-page-grid">
+            {% include 'partials/report_tools_fields.html' %}
+
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Doctor Response</h2>
+                        <p class="card-sub">Structured report guidance is shown here once analysis completes.</p>
+                    </div>
+                </div>
+                <textarea
+                    class="auto-expand"
+                    readonly
+                    placeholder="The AI summary will appear here."
+                >{{ doctor_response }}</textarea>
+            </section>
+
+            <section class="card">
+                <div class="card-header">
+                    <div>
+                        <h2>Report Findings Summary</h2>
+                        <p class="card-sub">Structured explanation of uploaded report data and detected clinical patterns.</p>
+                    </div>
+                </div>
+                <textarea
+                    class="auto-expand"
+                    readonly
+                    placeholder="Report analysis findings will appear here."
+                >{{ report_summary }}</textarea>
+            </section>
+        </div>
+
+        <footer class="footer">
+            <button type="submit" id="analyzeBtn">Analyze Reports</button>
+        </footer>
+    </form>
+
+    {% if latest_analysis and user.is_authenticated %}
+        <section class="card analysis-result-card">
+            <div class="card-header">
+                <div>
+                    <h2>Latest Clinical Record Saved</h2>
+                    <p class="card-sub">This analysis has been stored for comparison, dashboard analytics, and treatment tracking.</p>
+                </div>
+                <a class="secondary-link" href="{% url 'analysis_detail' latest_analysis.id %}">Open Record</a>
+            </div>
+
+            <div class="profile-summary">
+                <div class="profile-summary-item">
+                    <span class="summary-label">Predicted Condition</span>
+                    <strong>{{ latest_analysis.predicted_condition }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Risk Level</span>
+                    <strong>{{ latest_analysis.risk_level }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Detected Conditions</span>
+                    <strong>{{ latest_analysis.detected_conditions_count }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Model Source</span>
+                    <strong>{{ latest_analysis.model_source }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Disease Level</span>
+                    <strong>
+                        {% if latest_analysis.disease_percentage != None %}
+                            {{ latest_analysis.disease_percentage|floatformat:0 }}%
+                        {% else %}
+                            Not identified
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+        </section>
+    {% endif %}
+
+    {% if report_comparison %}
+        <section class="card analysis-result-card">
+            <div class="card-header">
+                <div>
+                    <h2>Disease Burden Comparison</h2>
+                    <p class="card-sub">Previous and current reports were compared automatically to show improvement and remaining disease burden.</p>
+                </div>
+            </div>
+
+            <div class="comparison-visual-grid">
+                <div class="comparison-pie-wrap">
+                    <div
+                        class="comparison-pie"
+                        style="--comparison-fill: {{ report_comparison.chart_fill_degrees }}deg;"
+                        aria-label="Disease reduction versus remaining percentage"
+                    >
+                        <div class="comparison-pie-center">
+                            <strong>{{ report_comparison.current_percentage|floatformat:0 }}%</strong>
+                            <span>Current level</span>
+                        </div>
+                    </div>
+
+                    <div class="comparison-legend">
+                        <div class="comparison-legend-item">
+                            <span class="comparison-swatch comparison-swatch-change"></span>
+                            <span>{{ report_comparison.change_label }}: {{ report_comparison.change_percentage|floatformat:0 }}%</span>
+                        </div>
+                        <div class="comparison-legend-item">
+                            <span class="comparison-swatch comparison-swatch-remaining"></span>
+                            <span>Remaining: {{ report_comparison.remaining_percentage|floatformat:0 }}%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-summary">
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Previous Report</span>
+                        <strong>{{ report_comparison.previous_percentage|floatformat:0 }}%</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Current Report</span>
+                        <strong>{{ report_comparison.current_percentage|floatformat:0 }}%</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">{{ report_comparison.change_label }}</span>
+                        <strong>{{ report_comparison.change_percentage|floatformat:0 }}%</strong>
+                    </div>
+                    <div class="profile-summary-item">
+                        <span class="summary-label">Remaining</span>
+                        <strong>{{ report_comparison.remaining_percentage|floatformat:0 }}%</strong>
+                    </div>
+                    <div class="profile-summary-item profile-summary-wide">
+                        <span class="summary-label">Interpretation</span>
+                        <strong>{{ report_comparison.message }}</strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+    {% endif %}
+{% endblock %}

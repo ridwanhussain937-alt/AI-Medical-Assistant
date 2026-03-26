@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="{{ current_site_locale }}" dir="{{ current_site_direction }}">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta
+        name="description"
+        content="AI Medical Assistant for symptom intake, image review, and follow-up patient conversations."
+    >
+    <meta name="theme-color" content="#0a1629">
+    <meta name="google-site-verification" content="qQc4uQLuObAFTrLo22UGpJI1LweTqcYgosGLuUxBk98" />
+    <title>{% block title %}AI Medical Assistant{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/medical-assistant-logo.svg' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body data-site-language="{{ current_site_language }}" data-site-direction="{{ current_site_direction }}">
+    {{ site_translation_catalog|json_script:"site-translation-catalog" }}
+    <div class="app-shell">
+        <a class="skip-link" href="#main-content">Skip to content</a>
+
+        <header class="header">
+            <a class="brand" href="{% url 'index' %}">
+                <span class="brand-mark">
+                    <img
+                        class="brand-logo"
+                        src="{% static 'img/medical-assistant-logo.svg' %}"
+                        alt="AI Medical Assistant logo"
+                    >
+                </span>
+                <span class="brand-copy">
+                    <span class="brand-title">AI Medical Assistant</span>
+                    <span class="brand-subtitle">Clinical decision-support workspace</span>
+                </span>
+            </a>
+
+            <div class="header-actions">
+                <nav class="quick-nav" aria-label="Quick navigation">
+                    <a class="quick-link" href="{% url 'index' %}">Home</a>
+                    <a class="quick-link" href="{% url 'chat' %}">Chat</a>
+                    {% if user.is_authenticated %}
+                        <a class="account-pill account-pill-standalone" href="{% url 'change_credentials' %}">
+                            <span class="user-icon" aria-hidden="true">{{ user.username|first|upper }}</span>
+                            <span class="account-copy">
+                                <span class="account-label">Signed in</span>
+                                <span class="username">{{ user.get_full_name|default:user.email|default:user.username }}</span>
+                            </span>
+                        </a>
+                    {% else %}
+                        <a class="quick-link" href="{% url 'login' %}">Sign In</a>
+                    {% endif %}
+                </nav>
+
+                <details class="menu-shell">
+                    <summary
+                        class="menu-toggle"
+                        aria-label="Open navigation menu"
+                        aria-controls="nav-menu"
+                    >
+                        <span class="menu-toggle-icon" aria-hidden="true">&#9776;</span>
+                    </summary>
+
+                    <div class="nav-menu" id="nav-menu" aria-label="More options">
+                        <div class="nav-menu-header">Navigation</div>
+                        <ul class="nav-menu-list">
+                            {% if user.is_authenticated %}
+                                <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                                <li><a href="{% url 'history' %}">History</a></li>
+                                <li><a href="{% url 'change_credentials' %}">Profile Settings</a></li>
+                                <li>
+                                    <button
+                                        class="nav-menu-button"
+                                        type="button"
+                                        onclick="toggleSettings(event)"
+                                    >
+                                        Preferences
+                                    </button>
+                                </li>
+                                <li><a class="nav-menu-danger" href="{% url 'logout' %}">Logout</a></li>
+                            {% else %}
+                                <li><a href="{% url 'register' %}">Register</a></li>
+                                <li>
+                                    <button
+                                        class="nav-menu-button"
+                                        type="button"
+                                        onclick="toggleSettings(event)"
+                                    >
+                                        Preferences
+                                    </button>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </details>
+            </div>
+        </header>
+
+        <aside class="settings-panel" id="settings" aria-label="Display settings">
+            <section>
+                <label for="theme-select"><strong>Theme</strong></label>
+                <select id="theme-select" onchange="changeTheme(this.value)">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                </select>
+            </section>
+            <section class="settings-section">
+                <label for="language-select"><strong>Website Language</strong></label>
+                <select
+                    id="language-select"
+                    name="language"
+                    data-language-switcher="true"
+                    data-language-endpoint="{% url 'set_site_language' %}"
+                    data-next-url="{{ request.get_full_path|urlencode }}"
+                >
+                    {% for code, label in supported_site_languages %}
+                        <option value="{{ code }}" {% if current_site_language == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </section>
+        </aside>
+
+        {% if messages %}
+            <div class="flash-stack" aria-live="polite">
+                {% for message in messages %}
+                    <div class="flash flash-{{ message.tags|default:'info' }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <main class="main-content" id="main-content">
+            {% block content %}{% endblock %}
+        </main>
+
+        <footer class="site-footer">
+            <div class="site-footer-inner">
+                <div>
+                    <strong>AI Medical Assistant</strong>
+                    <p>
+                        Clinical decision-support workspace for report analysis, image review, follow-up guidance,
+                        and treatment tracking.
+                    </p>
+                </div>
+                <div>
+                    <strong>Important Notice</strong>
+                    <p>
+                        This platform supports clinical workflows and does not replace emergency care or a licensed
+                        physician's final judgment.
+                    </p>
+                </div>
+                <div>
+                    <strong>Access</strong>
+                    <p>
+                        {% if user.is_authenticated %}
+                            Signed in as {{ user.get_full_name|default:user.email|default:user.username }}.
+                        {% else %}
+                            Secure sign-in, OTP-based registration, and account activity tracking are enabled.
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+            <p class="site-footer-meta">&copy; {% now "Y" %} AI Medical Assistant. Built for a professional healthcare workflow.</p>
+        </footer>
+    </div>
+
+    <script src="{% static 'js/main.js' %}" defer></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Verify OTP{% endblock %}
+
+{% block content %}
+    <section class="auth-wrapper">
+        <div class="container">
+            <div class="auth-brand">
+                <img
+                    class="auth-logo"
+                    src="{% static 'img/medical-assistant-logo.svg' %}"
+                    alt="AI Medical Assistant logo"
+                >
+                <div>
+                    <p class="eyebrow">AI Medical Assistant</p>
+                    <p class="auth-brand-copy">Email OTP verification</p>
+                </div>
+            </div>
+
+            <p class="eyebrow">Account Verification</p>
+            <h1>Verify your email OTP</h1>
+            <p class="auth-subtitle">
+                We sent a verification code to <strong>{{ pending_registration.masked_email }}</strong>.
+                Enter the email OTP to complete account creation.
+            </p>
+
+            {% if otp_demo_note %}
+                <div class="flash flash-info otp-note">{{ otp_demo_note }}</div>
+            {% endif %}
+
+            <form method="post" class="stack-form">
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="error">{{ form.non_field_errors|striptags }}</div>
+                {% endif %}
+
+                <label for="{{ form.email_otp.id_for_label }}">Email OTP</label>
+                {{ form.email_otp }}
+                {% if form.email_otp.errors %}
+                    <div class="error">{{ form.email_otp.errors|striptags }}</div>
+                {% endif %}
+
+                <p class="field-note">The email OTP expires in {{ otp_expiry_minutes }} minutes. Registration will finish after successful email verification.</p>
+
+                <div class="form-actions">
+                    <button type="submit">Verify and Create Account</button>
+                    <button type="submit" name="resend_otp" value="1" class="secondary-button">Resend OTP</button>
+                </div>
+            </form>
+
+            <p class="auth-link">
+                Need to change details? <a href="{% url 'register' %}">Start registration again</a>
+            </p>
+        </div>
+    </section>
+{% endblock %}

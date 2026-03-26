@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete User{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">User Management</p>
+            <h1>Delete {{ managed_user.get_full_name|default:managed_user.username }}?</h1>
+            <p>This action permanently removes the member profile, login activity, and related user records.</p>
+        </div>
+    </section>
+
+    <section class="card narrow-card">
+        <div class="stack-form">
+            <p><strong>User ID:</strong> {{ managed_user.email|default:managed_user.username }}</p>
+            <p><strong>Role:</strong> {% if managed_user.is_staff %}Admin{% else %}Member{% endif %}</p>
+
+            <form method="post" class="form-actions">
+                {% csrf_token %}
+                <button type="submit" class="danger-button">Delete User</button>
+                <a class="secondary-link" href="{% url 'dashboard' %}">Cancel</a>
+            </form>
+        </div>
+    </section>
+{% endblock %}

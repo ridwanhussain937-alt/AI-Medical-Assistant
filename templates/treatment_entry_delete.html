@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Treatment Entry{% endblock %}
+
+{% block content %}
+    <section class="page-intro page-intro-compact">
+        <div>
+            <p class="eyebrow">Treatment Management</p>
+            <h1>Delete treatment entry</h1>
+            <p>Review the selected treatment entry before removing it from this clinical audit trail.</p>
+        </div>
+    </section>
+
+    <section class="card narrow-card">
+        <div class="card-header">
+            <div>
+                <h2>{{ treatment_entry.doctor_name }} ({{ treatment_entry.specialization }})</h2>
+                <p class="card-sub">This action removes the record from {{ analysis.title }}.</p>
+            </div>
+        </div>
+
+        <div class="stack">
+            <div class="profile-summary">
+                <div class="profile-summary-item">
+                    <span class="summary-label">Doctor ID</span>
+                    <strong>{{ treatment_entry.doctor_id }}</strong>
+                </div>
+                <div class="profile-summary-item">
+                    <span class="summary-label">Contact</span>
+                    <strong>{{ treatment_entry.contact_details|default:"Not provided" }}</strong>
+                </div>
+            </div>
+
+            <div class="analysis-copy">
+                <strong>Treatment Notes</strong>
+                <p>{{ treatment_entry.treatment_notes|linebreaksbr }}</p>
+            </div>
+
+            <form method="post" class="form-actions">
+                {% csrf_token %}
+                <button type="submit" class="danger-button">Delete Entry</button>
+                <a class="secondary-link" href="{% url 'analysis_detail' analysis.id %}">Cancel</a>
+            </form>
+        </div>
+    </section>
+{% endblock %}
