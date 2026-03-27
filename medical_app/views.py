@@ -92,9 +92,11 @@ def _mark_current_login_inactive(request):
 
 def _build_otp_delivery_note():
     if settings.EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":
-        return "Email OTPs are currently printed in the server terminal."
+        if settings.DEBUG:
+            return "This demo environment keeps email delivery local for testing."
+        return ""
 
-    return "Email OTP delivery is configured for your email provider."
+    return "Check your email inbox for the verification code."
 
 
 def _resolve_safe_next_url(request, requested_next):
@@ -488,7 +490,7 @@ def google_login_start(request):
     if not (settings.GOOGLE_OAUTH_CLIENT_ID and settings.GOOGLE_OAUTH_CLIENT_SECRET):
         messages.warning(
             request,
-            "Google login is not configured yet. Add GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET to .env, then restart the server.",
+            "Google sign-in is not available right now.",
         )
         return redirect(f"{reverse('login')}?{urlencode({'next': next_url})}")
 

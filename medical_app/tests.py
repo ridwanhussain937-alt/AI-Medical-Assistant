@@ -194,13 +194,13 @@ class LoginPageTests(TestCase):
         GOOGLE_OAUTH_CLIENT_ID="",
         GOOGLE_OAUTH_CLIENT_SECRET="",
     )
-    def test_login_page_shows_clickable_gmail_button_when_oauth_not_configured(self):
+    def test_login_page_hides_google_button_when_oauth_not_configured(self):
         response = self.client.get(reverse("login"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Login with Gmail")
-        self.assertContains(response, reverse("google_login_start"))
-        self.assertNotContains(response, "disabled")
+        self.assertNotContains(response, "Continue with Google")
+        self.assertNotContains(response, reverse("google_login_start"))
+        self.assertNotContains(response, "or continue with password")
 
     @override_settings(
         GOOGLE_OAUTH_CLIENT_ID="",
@@ -216,11 +216,11 @@ class LoginPageTests(TestCase):
         GOOGLE_OAUTH_CLIENT_ID="google-client-id",
         GOOGLE_OAUTH_CLIENT_SECRET="google-client-secret",
     )
-    def test_login_page_shows_active_gmail_button_when_oauth_configured(self):
+    def test_login_page_shows_active_google_button_when_oauth_configured(self):
         response = self.client.get(reverse("login"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Login with Gmail")
+        self.assertContains(response, "Continue with Google")
         self.assertContains(response, reverse("google_login_start"))
         self.assertContains(response, "Google opens its account chooser directly")
 
