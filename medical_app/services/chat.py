@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from django.utils import timezone
@@ -13,6 +14,7 @@ from medical_app.services.preferences import build_health_context, build_prompt_
 
 
 MEDICAL_MODEL = DEFAULT_MEDICAL_MODEL
+logger = logging.getLogger(__name__)
 
 
 def build_chat_prompt(patient_text, user_profile=None):
@@ -124,6 +126,11 @@ def process_chat_message(
                 **build_generation_settings(),
             )
         except Exception:
+            logger.exception(
+                "Chat provider request failed for session_id=%s model=%s",
+                session.id,
+                model_name,
+            )
             ai_response = "I could not generate a response right now. Please try again in a moment."
             had_remote_error = True
 
