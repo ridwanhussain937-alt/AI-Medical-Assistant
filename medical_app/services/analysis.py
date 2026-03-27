@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 from pathlib import Path
@@ -29,6 +30,7 @@ from medical_app.services.preferences import (
 
 
 MEDICAL_MODEL = DEFAULT_MEDICAL_MODEL
+logger = logging.getLogger(__name__)
 
 
 def build_summary_prompt(patient_text, language, user_profile=None):
@@ -257,8 +259,15 @@ def process_clinical_intake(
                     output_filepath=str(generated_audio_path),
                     language=language,
                 )
+                if not generated_audio_path.exists() or generated_audio_path.stat().st_size < 1024:
+                    raise ValueError("Generated audio file was empty or invalid.")
                 context["audio_url"] = _build_media_url(generated_audio_path)
             except Exception:
+                logger.exception(
+                    "Voice summary generation failed for language=%s user_id=%s",
+                    language,
+                    request.user.id if request.user.is_authenticated else None,
+                )
                 context["error_message"] = (
                     "The written response is ready, but voice playback could not be generated right now."
                 )

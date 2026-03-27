@@ -1,5 +1,18 @@
 import asyncio
+import re
+
 import edge_tts
+
+
+def _build_tts_text(input_text):
+    # Strip markdown-style formatting and compress whitespace so the TTS provider
+    # receives a short, plain-language summary instead of raw rich-text output.
+    cleaned_text = re.sub(r"[*_`#>\-]+", " ", str(input_text or ""))
+    cleaned_text = re.sub(r"\s+", " ", cleaned_text).strip()
+    if not cleaned_text:
+        raise ValueError("No text was available for voice synthesis.")
+
+    return cleaned_text[:1800]
 
 
 def text_to_speech_with_edge(input_text, output_filepath, language="english"):
@@ -19,7 +32,7 @@ def text_to_speech_with_edge(input_text, output_filepath, language="english"):
     async def generate_voice():
 
         communicate=edge_tts.Communicate(
-            text=input_text,
+            text=_build_tts_text(input_text),
             voice=voice
         )
 
