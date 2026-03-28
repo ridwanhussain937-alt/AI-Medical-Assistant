@@ -79,7 +79,7 @@
                                 </li>
                                 <li><a class="nav-menu-danger" href="{% url 'logout' %}">Logout</a></li>
                             {% else %}
-                                <li><a href="{% url 'register' %}">Register</a></li>
+                                <li><a href="{% url 'google_login_start' %}">Continue with Google</a></li>
                                 <li>
                                     <button
                                         class="nav-menu-button"
@@ -154,7 +154,7 @@
                         {% if user.is_authenticated %}
                             Signed in as {{ user.get_full_name|default:user.email|default:user.username }}.
                         {% else %}
-                            Secure sign-in, OTP-based registration, and account activity tracking are enabled.
+                            Secure sign-in with Google and account activity tracking are enabled.
                         {% endif %}
                     </p>
                 </div>

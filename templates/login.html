@@ -40,6 +40,12 @@
                 <div class="oauth-divider" aria-hidden="true">
                     <span>or continue with password</span>
                 </div>
+            {% else %}
+                <div class="oauth-stack">
+                    <p class="oauth-note">
+                        New user access is handled through Google sign-in. Ask the administrator to finish Google OAuth setup if this option is unavailable.
+                    </p>
+                </div>
             {% endif %}
 
             <form method="post" class="stack-form">
@@ -66,7 +72,12 @@
             </form>
 
             <p class="auth-link">
-                Need an account? <a href="{% url 'register' %}">Create one</a>
+                New here?
+                {% if google_login_enabled %}
+                    <a href="{% url 'google_login_start' %}?next={{ next|urlencode }}">Continue with Google</a>
+                {% else %}
+                    Google sign-in is currently unavailable.
+                {% endif %}
             </p>
         </div>
     </section>

@@ -18,19 +18,15 @@ from medical_app.ai.voice_of_the_patient import transcribe_with_groq
 
 from .analysis_engine import compare_analyses
 from .forms import (
-    _build_unique_username,
     AdminUserManagementForm,
     ChatForm,
     LoginForm,
     ProfileSettingsForm,
-    RegisterForm,
-    RegistrationOTPForm,
     TreatmentEntryForm,
 )
 from .models import (
     LoginActivity,
     MedicalAnalysis,
-    PendingRegistration,
     TrainingDatasetUpload,
     TreatmentEntry,
     UserProfile,
@@ -53,33 +49,11 @@ from .services.analysis import process_clinical_intake
 from .services.chat import get_or_create_session_for_user, process_chat_message, serialize_history
 from .services.retraining import enqueue_ai_model_refresh
 from .services.site_language import SITE_LANGUAGE_SESSION_KEY, get_request_language, normalize_language
-from .verification import issue_registration_otp_challenge
 
 load_dotenv()
 
 user_model = get_user_model()
 staff_required = user_passes_test(lambda user: user.is_staff, login_url="login")
-
-
-def _create_user_from_pending_registration(pending_registration):
-    email = pending_registration.email.strip().lower()
-    if user_model.objects.filter(email__iexact=email).exists():
-        raise ValueError("An account with this email already exists.")
-
-    username_seed = email.split("@")[0]
-    user = user_model(
-        first_name=pending_registration.first_name.strip(),
-        last_name=pending_registration.last_name.strip(),
-        email=email,
-        username=_build_unique_username(username_seed),
-    )
-    user.password = pending_registration.password_hash
-    user.save()
-    UserProfile.objects.update_or_create(
-        user=user,
-        defaults={"mobile_number": ""},
-    )
-    return user
 
 
 def _mark_current_login_inactive(request):
@@ -90,17 +64,6 @@ def _mark_current_login_inactive(request):
     LoginActivity.objects.filter(user=request.user, session_key=session_key).update(is_active=False)
 
 
-def _build_otp_delivery_note():
-    if settings.RESEND_API_KEY:
-        return "Check your email inbox for the verification code."
-    if settings.EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":
-        if settings.DEBUG:
-            return "This demo environment keeps email delivery local for testing."
-        return ""
-
-    return "Check your email inbox for the verification code."
-
-
 def _resolve_safe_next_url(request, requested_next):
     if requested_next and url_has_allowed_host_and_scheme(
         requested_next,
@@ -109,6 +72,13 @@ def _resolve_safe_next_url(request, requested_next):
     ):
         return requested_next
     return reverse("dashboard")
+
+
+def _redirect_public_signup_to_google(request, requested_next, info_message=None):
+    next_url = _resolve_safe_next_url(request, requested_next)
+    if info_message:
+        messages.info(request, info_message)
+    return redirect(f"{reverse('google_login_start')}?{urlencode({'next': next_url})}")
 
 
 def healthcheck_view(request):
@@ -507,109 +477,27 @@ def allauth_login_redirect(request):
 
 def allauth_signup_redirect(request):
     requested_next = request.GET.get("next") or request.POST.get("next")
-    next_url = _resolve_safe_next_url(request, requested_next)
-    return redirect(f"{reverse('register')}?{urlencode({'next': next_url})}")
+    return _redirect_public_signup_to_google(request, requested_next)
 
 
 def register_view(request):
     if request.user.is_authenticated:
         return redirect("dashboard")
-
-    form = RegisterForm(request.POST or None)
-
-    if request.method == "POST" and form.is_valid():
-        PendingRegistration.objects.filter(email__iexact=form.cleaned_data["email"]).delete()
-        pending_registration = form.create_pending_registration()
-        try:
-            issue_registration_otp_challenge(pending_registration)
-        except Exception:
-            pending_registration.delete()
-            messages.error(
-                request,
-                "We could not send the OTP right now. Please check the delivery configuration and try again.",
-            )
-            return render(request, "register.html", {"form": form})
-        messages.success(
-            request,
-            "A verification OTP has been sent to your email address.",
-        )
-        return redirect("register_verify", token=pending_registration.verification_token)
-
-    return render(
+    requested_next = request.POST.get("next") or request.GET.get("next")
+    return _redirect_public_signup_to_google(
         request,
-        "register.html",
-        {
-            "form": form,
-        },
+        requested_next,
+        info_message="Continue with Google to create your account.",
     )
 
 
 def register_verify_view(request, token):
     if request.user.is_authenticated:
         return redirect("dashboard")
-
-    pending_registration = get_object_or_404(PendingRegistration, verification_token=token)
-    form = RegistrationOTPForm(request.POST or None)
-
-    if request.method == "POST":
-        if "resend_otp" in request.POST:
-            try:
-                issue_registration_otp_challenge(pending_registration)
-            except Exception:
-                messages.error(
-                    request,
-                    "We could not resend the OTP right now. Please try again shortly.",
-                )
-                return redirect("register_verify", token=pending_registration.verification_token)
-            messages.info(request, "A new email OTP has been sent.")
-            return redirect("register_verify", token=pending_registration.verification_token)
-
-        if pending_registration.is_expired:
-            form.add_error(None, "The OTP has expired. Please resend a new verification code.")
-        elif pending_registration.verification_attempts >= settings.REGISTRATION_OTP_MAX_ATTEMPTS:
-            pending_registration.delete()
-            messages.error(
-                request,
-                "The maximum OTP verification attempts were reached. Please register again.",
-            )
-            return redirect("register")
-        elif form.is_valid():
-            pending_registration.verification_attempts += 1
-            pending_registration.save(update_fields=["verification_attempts", "updated_at"])
-
-            email_matches = pending_registration.matches_email_otp(form.cleaned_data["email_otp"])
-
-            if not email_matches:
-                form.add_error("email_otp", "The email OTP is incorrect.")
-
-            if email_matches:
-                try:
-                    user = _create_user_from_pending_registration(pending_registration)
-                except ValueError as error:
-                    pending_registration.delete()
-                    messages.error(request, str(error))
-                    return redirect("register")
-
-                pending_registration.delete()
-                login(request, user, backend="django.contrib.auth.backends.ModelBackend")
-                if request.session.get(SITE_LANGUAGE_SESSION_KEY):
-                    profile = get_user_profile(user)
-                    selected_language = normalize_language(request.session[SITE_LANGUAGE_SESSION_KEY])
-                    if profile and profile.language_preference != selected_language:
-                        profile.language_preference = selected_language
-                        profile.save(update_fields=["language_preference", "updated_at"])
-                messages.success(request, "Your account has been created successfully.")
-                return redirect("dashboard")
-
-    return render(
+    return _redirect_public_signup_to_google(
         request,
-        "register_verify.html",
-        {
-            "form": form,
-            "pending_registration": pending_registration,
-            "otp_expiry_minutes": settings.REGISTRATION_OTP_EXPIRY_MINUTES,
-            "otp_demo_note": _build_otp_delivery_note(),
-        },
+        request.GET.get("next") or request.POST.get("next"),
+        info_message="Email OTP registration is no longer available. Continue with Google to sign in.",
     )
 
 

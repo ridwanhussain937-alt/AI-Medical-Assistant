@@ -184,11 +184,11 @@ class LoginPageTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.headers["Location"], "/login/?next=%2Fdashboard%2F")
 
-    def test_allauth_signup_redirects_to_branded_registration(self):
+    def test_allauth_signup_redirects_to_google_signup_flow(self):
         response = self.client.get("/accounts/signup/?next=/dashboard/")
 
         self.assertEqual(response.status_code, 302)
-        self.assertEqual(response.headers["Location"], "/register/?next=%2Fdashboard%2F")
+        self.assertEqual(response.headers["Location"], "/google-login/?next=%2Fdashboard%2F")
 
     @override_settings(
         GOOGLE_OAUTH_CLIENT_ID="",
@@ -198,8 +198,7 @@ class LoginPageTests(TestCase):
         response = self.client.get(reverse("login"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, "Continue with Google")
-        self.assertNotContains(response, reverse("google_login_start"))
+        self.assertNotContains(response, 'class="google-signin-button"', html=False)
         self.assertNotContains(response, "or continue with password")
 
     @override_settings(
@@ -236,6 +235,34 @@ class LoginPageTests(TestCase):
             response.headers["Location"],
             "/accounts/google/login/?next=%2Fdashboard%2F",
         )
+
+    @override_settings(
+        GOOGLE_OAUTH_CLIENT_ID="google-client-id",
+        GOOGLE_OAUTH_CLIENT_SECRET="google-client-secret",
+    )
+    def test_register_route_redirects_to_google_signup_flow(self):
+        response = self.client.get(f"{reverse('register')}?next=/dashboard/")
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/google-login/?next=%2Fdashboard%2F")
+
+    @override_settings(
+        GOOGLE_OAUTH_CLIENT_ID="google-client-id",
+        GOOGLE_OAUTH_CLIENT_SECRET="google-client-secret",
+    )
+    def test_register_verify_route_redirects_to_google_signup_flow(self):
+        pending = PendingRegistration.objects.create(
+            first_name="Ava",
+            last_name="Stone",
+            email="ava@example.com",
+            mobile_number="",
+            password_hash="placeholder",
+        )
+
+        response = self.client.get(reverse("register_verify", args=[pending.verification_token]))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/google-login/?next=%2Fdashboard%2F")
 
 
 class AnalysisEngineTests(TestCase):
@@ -465,18 +492,12 @@ class DatasetImportTests(TestCase):
             cleanup_scratch_dir(dataset_dir)
 
 
-@override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
 class RegistrationTests(TestCase):
-    def test_registration_page_exposes_live_validation_hooks(self):
-        response = self.client.get(reverse("register"))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'data-live-validate="email"')
-        self.assertNotContains(response, 'data-live-validate="mobile"')
-        self.assertContains(response, "medical-assistant-logo.svg")
-
-    @patch("medical_app.verification.generate_otp_code", return_value="123456")
-    def test_registration_creates_profile_with_required_fields(self, mock_codes):
+    @override_settings(
+        GOOGLE_OAUTH_CLIENT_ID="google-client-id",
+        GOOGLE_OAUTH_CLIENT_SECRET="google-client-secret",
+    )
+    def test_register_post_redirects_to_google_login_without_creating_pending_registration(self):
         response = self.client.post(
             reverse("register"),
             {
@@ -486,104 +507,34 @@ class RegistrationTests(TestCase):
                 "password1": "StrongPass123!",
                 "password2": "StrongPass123!",
             },
-            follow=True,
         )
 
-        pending = PendingRegistration.objects.get(email="ava@example.com")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Verify your email OTP")
-        self.assertFalse(user_model.objects.filter(email="ava@example.com").exists())
-        self.assertEqual(len(mail.outbox), 1)
-
-        verify_response = self.client.post(
-            reverse("register_verify", args=[pending.verification_token]),
-            {
-                "email_otp": "123456",
-            },
-            follow=True,
-        )
-
-        user = user_model.objects.get(email="ava@example.com")
-
-        self.assertEqual(verify_response.status_code, 200)
-        self.assertEqual(user.first_name, "Ava")
-        self.assertEqual(user.profile.mobile_number, "")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/google-login/?next=%2Fdashboard%2F")
         self.assertFalse(PendingRegistration.objects.filter(email="ava@example.com").exists())
-
-    def test_registration_rejects_invalid_email(self):
-        response = self.client.post(
-            reverse("register"),
-            {
-                "first_name": "Ava",
-                "last_name": "Stone",
-                "email": "invalid-email",
-                "password1": "StrongPass123!",
-                "password2": "StrongPass123!",
-            },
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Enter a valid email ID.")
-        self.assertFalse(user_model.objects.filter(email="invalid-email").exists())
-
-    @patch("medical_app.verification.generate_otp_code", return_value="123456")
-    def test_registration_does_not_complete_with_invalid_otp(self, mock_codes):
-        self.client.post(
-            reverse("register"),
-            {
-                "first_name": "Ava",
-                "last_name": "Stone",
-                "email": "ava@example.com",
-                "password1": "StrongPass123!",
-                "password2": "StrongPass123!",
-            },
-        )
-
-        pending = PendingRegistration.objects.get(email="ava@example.com")
-        response = self.client.post(
-            reverse("register_verify", args=[pending.verification_token]),
-            {
-                "email_otp": "111111",
-            },
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "The email OTP is incorrect.")
         self.assertFalse(user_model.objects.filter(email="ava@example.com").exists())
 
     @override_settings(
-        RESEND_API_KEY="re_test_key",
-        RESEND_FROM_EMAIL="AI Medical Assistant <noreply@example.com>",
+        GOOGLE_OAUTH_CLIENT_ID="google-client-id",
+        GOOGLE_OAUTH_CLIENT_SECRET="google-client-secret",
     )
-    @patch("medical_app.verification.generate_otp_code", return_value="123456")
-    @patch("medical_app.verification.urlopen")
-    def test_registration_uses_resend_api_when_configured(self, mock_urlopen, mock_codes):
-        mock_response = MagicMock()
-        mock_response.__enter__.return_value = mock_response
-        mock_response.status = 200
-        mock_response.read.return_value = b'{"id":"email_123"}'
-        mock_urlopen.return_value = mock_response
-
-        response = self.client.post(
-            reverse("register"),
-            {
-                "first_name": "Ava",
-                "last_name": "Stone",
-                "email": "ava@example.com",
-                "password1": "StrongPass123!",
-                "password2": "StrongPass123!",
-            },
-            follow=True,
+    def test_verify_route_redirects_legacy_tokens_to_google_login(self):
+        pending = PendingRegistration.objects.create(
+            first_name="Ava",
+            last_name="Stone",
+            email="ava@example.com",
+            mobile_number="",
+            password_hash="placeholder",
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(mock_urlopen.call_count, 1)
-        request = mock_urlopen.call_args.args[0]
-        self.assertEqual(request.full_url, "https://api.resend.com/emails")
-        payload = json.loads(request.data.decode("utf-8"))
-        self.assertEqual(payload["to"], ["ava@example.com"])
-        self.assertEqual(payload["subject"], "Verify your AI Medical Assistant email")
+        response = self.client.post(
+            reverse("register_verify", args=[pending.verification_token]),
+            {"email_otp": "123456"},
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/google-login/?next=%2Fdashboard%2F")
+        self.assertTrue(PendingRegistration.objects.filter(email="ava@example.com").exists())
 
 
 class ChatTests(TestCase):
