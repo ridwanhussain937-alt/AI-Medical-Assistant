@@ -23,6 +23,8 @@ Recommended setup:
    - `GROQ_API_KEY`
    - `GOOGLE_OAUTH_CLIENT_ID`
    - `GOOGLE_OAUTH_CLIENT_SECRET`
+   - `RESEND_API_KEY`
+   - `RESEND_FROM_EMAIL`
 5. If you want a demo admin account on first deploy, set:
    - `DJANGO_CREATE_DEMO_ADMIN=true`
    - `DJANGO_DEMO_ADMIN_USERNAME=admin1`
@@ -71,6 +73,8 @@ Optional environment variables:
 - `GROQ_API_KEY`
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
 - `DJANGO_CREATE_DEMO_ADMIN=true`
 - `DJANGO_DEMO_ADMIN_USERNAME=admin1`
 - `DJANGO_DEMO_ADMIN_EMAIL=admin1@example.com`
@@ -79,6 +83,15 @@ Optional environment variables:
 Koyeb note:
 
 - free instances do not give you durable volume-backed storage, so uploads and trained artifacts are best treated as demo-only data
+
+## OTP Email Delivery
+
+For direct OTP delivery on hosted deployments, you can use either:
+
+- SMTP via Django email settings
+- the Resend HTTP API via `RESEND_API_KEY` and `RESEND_FROM_EMAIL`
+
+For Render free deployments, the Resend API path is usually the simplest because it works over normal HTTPS requests from the app process.
 
 ## Docker / VPS
 

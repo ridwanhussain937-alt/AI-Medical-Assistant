@@ -5,7 +5,7 @@ import uuid
 import zipfile
 from io import BytesIO, StringIO
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.sites.models import Site
@@ -551,6 +551,39 @@ class RegistrationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "The email OTP is incorrect.")
         self.assertFalse(user_model.objects.filter(email="ava@example.com").exists())
+
+    @override_settings(
+        RESEND_API_KEY="re_test_key",
+        RESEND_FROM_EMAIL="AI Medical Assistant <noreply@example.com>",
+    )
+    @patch("medical_app.verification.generate_otp_code", return_value="123456")
+    @patch("medical_app.verification.urlopen")
+    def test_registration_uses_resend_api_when_configured(self, mock_urlopen, mock_codes):
+        mock_response = MagicMock()
+        mock_response.__enter__.return_value = mock_response
+        mock_response.status = 200
+        mock_response.read.return_value = b'{"id":"email_123"}'
+        mock_urlopen.return_value = mock_response
+
+        response = self.client.post(
+            reverse("register"),
+            {
+                "first_name": "Ava",
+                "last_name": "Stone",
+                "email": "ava@example.com",
+                "password1": "StrongPass123!",
+                "password2": "StrongPass123!",
+            },
+            follow=True,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(mock_urlopen.call_count, 1)
+        request = mock_urlopen.call_args.args[0]
+        self.assertEqual(request.full_url, "https://api.resend.com/emails")
+        payload = json.loads(request.data.decode("utf-8"))
+        self.assertEqual(payload["to"], ["ava@example.com"])
+        self.assertEqual(payload["subject"], "Verify your AI Medical Assistant email")
 
 
 class ChatTests(TestCase):

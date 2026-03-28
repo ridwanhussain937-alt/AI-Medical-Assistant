@@ -91,6 +91,8 @@ def _mark_current_login_inactive(request):
 
 
 def _build_otp_delivery_note():
+    if settings.RESEND_API_KEY:
+        return "Check your email inbox for the verification code."
     if settings.EMAIL_BACKEND == "django.core.mail.backends.console.EmailBackend":
         if settings.DEBUG:
             return "This demo environment keeps email delivery local for testing."

@@ -428,6 +428,8 @@ Important settings include:
 - `GROQ_API_KEY`
 - `GOOGLE_OAUTH_CLIENT_ID`
 - `GOOGLE_OAUTH_CLIENT_SECRET`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL`
 - `DJANGO_EMAIL_BACKEND`
 - `DJANGO_EMAIL_HOST`
 - `DJANGO_EMAIL_HOST_USER`
@@ -444,15 +446,18 @@ Important settings include:
 
 To send real email OTPs:
 
-1. Configure SMTP settings and set `DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`
-2. For a free Gmail-based setup, use:
+1. Recommended on hosted deployments: set
+   - `RESEND_API_KEY`
+   - `RESEND_FROM_EMAIL`
+2. Or configure SMTP settings and set `DJANGO_EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`
+3. For a Gmail SMTP setup, use:
    - `DJANGO_EMAIL_HOST=smtp.gmail.com`
    - `DJANGO_EMAIL_PORT=587`
    - `DJANGO_EMAIL_USE_TLS=true`
    - `DJANGO_EMAIL_HOST_USER=your-gmail-address`
    - `DJANGO_EMAIL_HOST_PASSWORD=your-gmail-app-password`
-3. Use a Gmail App Password instead of your normal Gmail password.
-4. SMS/Twilio settings are no longer required for registration because OTP verification is email-only.
+4. Use a Gmail App Password instead of your normal Gmail password.
+5. SMS/Twilio settings are no longer required for registration because OTP verification is email-only.
 
 ## Operations
 
