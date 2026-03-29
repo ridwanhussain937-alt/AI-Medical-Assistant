@@ -17,13 +17,22 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
+from medical_app.seo import PublicPagesSitemap
+from medical_app.seo_views import robots_txt_view
 from medical_app import views as medical_views
+
+sitemaps = {
+    "public": PublicPagesSitemap,
+}
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("healthz", medical_views.healthcheck_view, name="healthcheck"),
+    path("robots.txt", robots_txt_view, name="robots_txt"),
+    path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="sitemap"),
     path("accounts/login/", medical_views.allauth_login_redirect),
     path("accounts/signup/", medical_views.allauth_signup_redirect),
     path("accounts/", include("allauth.urls")),

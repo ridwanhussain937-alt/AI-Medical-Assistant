@@ -1,4 +1,5 @@
 from medical_app.services.preferences import get_user_profile
+from medical_app.seo import build_seo_context
 from medical_app.services.site_language import (
     build_translation_catalog,
     get_language_choices,
@@ -20,3 +21,9 @@ def site_language_context(request):
         "supported_site_languages": get_language_choices(),
         "site_translation_catalog": build_translation_catalog(current_language),
     }
+
+
+def seo_context(request):
+    user_profile = get_user_profile(getattr(request, "user", None))
+    current_language = get_request_language(request, user_profile=user_profile)
+    return build_seo_context(request, current_language)

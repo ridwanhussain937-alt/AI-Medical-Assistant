@@ -1,7 +1,11 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Reports & Comparison{% endblock %}
+{% block title %}Medical Report Analysis & Comparison | AI Medical Assistant{% endblock %}
+
+{% block meta_description %}
+    Upload a current report, compare it with earlier records, and generate a structured AI-assisted clinical summary inside AI Medical Assistant.
+{% endblock %}
 
 {% block extra_js %}
     <script src="{% static 'js/upload.js' %}" defer></script>

@@ -265,6 +265,48 @@ class LoginPageTests(TestCase):
         self.assertEqual(response.headers["Location"], "/google-login/?next=%2Fdashboard%2F")
 
 
+class SeoSurfaceTests(TestCase):
+    def test_homepage_contains_canonical_robots_and_structured_data(self):
+        response = self.client.get(reverse("index"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            '<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">',
+            html=False,
+        )
+        self.assertContains(response, '<link rel="canonical" href="http://testserver/">', html=False)
+        self.assertContains(response, '"@context": "https://schema.org"', html=False)
+        self.assertContains(response, "Clinical Intake, Report Analysis and Follow-Up Support")
+
+    def test_login_page_is_noindex(self):
+        response = self.client.get(reverse("login"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            '<meta name="robots" content="noindex,follow">',
+            html=False,
+        )
+
+    def test_robots_txt_includes_sitemap_and_private_disallows(self):
+        response = self.client.get(reverse("robots_txt"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "User-agent: *")
+        self.assertContains(response, "Disallow: /admin/")
+        self.assertContains(response, "Disallow: /dashboard/")
+        self.assertContains(response, "Sitemap: http://testserver/sitemap.xml")
+
+    def test_sitemap_lists_public_pages(self):
+        response = self.client.get(reverse("sitemap"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "http://127.0.0.1:8000/")
+        self.assertContains(response, "http://127.0.0.1:8000/reports/")
+        self.assertNotContains(response, "http://127.0.0.1:8000/chat/")
+
+
 class AnalysisEngineTests(TestCase):
     @patch("medical_app.analysis_engine._load_pickle_model")
     def test_report_analysis_prefers_heuristics_when_trained_model_disagrees(self, mock_model_loader):

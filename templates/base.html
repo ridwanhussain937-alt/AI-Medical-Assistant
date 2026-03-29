@@ -6,13 +6,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta
         name="description"
-        content="AI Medical Assistant for symptom intake, image review, and follow-up patient conversations."
+        content="{% block meta_description %}{{ seo_description }}{% endblock %}"
     >
+    <meta name="robots" content="{% block meta_robots %}{{ seo_robots }}{% endblock %}">
+    <link rel="canonical" href="{% block canonical_url %}{{ seo_canonical_url }}{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}{{ seo_title }}{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}{{ seo_description }}{% endblock %}">
+    <meta property="og:url" content="{{ seo_canonical_url }}">
+    <meta property="og:type" content="{{ seo_og_type }}">
+    <meta property="og:site_name" content="AI Medical Assistant">
+    <meta property="og:image" content="{{ seo_og_image_url }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ seo_title }}">
+    <meta name="twitter:description" content="{{ seo_description }}">
+    <meta name="twitter:image" content="{{ seo_og_image_url }}">
     <meta name="theme-color" content="#0a1629">
     <meta name="google-site-verification" content="qQc4uQLuObAFTrLo22UGpJI1LweTqcYgosGLuUxBk98" />
-    <title>{% block title %}AI Medical Assistant{% endblock %}</title>
+    <title>{% block title %}{{ seo_title }}{% endblock %}</title>
     <link rel="icon" type="image/svg+xml" href="{% static 'img/medical-assistant-logo.svg' %}">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% if seo_structured_data_json %}
+        <script type="application/ld+json">{{ seo_structured_data_json|safe }}</script>
+    {% endif %}
     {% block extra_css %}{% endblock %}
 </head>
 <body data-site-language="{{ current_site_language }}" data-site-direction="{{ current_site_direction }}">
