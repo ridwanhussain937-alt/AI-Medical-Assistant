@@ -302,9 +302,9 @@ class SeoSurfaceTests(TestCase):
         response = self.client.get(reverse("sitemap"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "http://127.0.0.1:8000/")
-        self.assertContains(response, "http://127.0.0.1:8000/reports/")
-        self.assertNotContains(response, "http://127.0.0.1:8000/chat/")
+        self.assertContains(response, "http://testserver/")
+        self.assertContains(response, "http://testserver/reports/")
+        self.assertNotContains(response, "http://testserver/chat/")
 
 
 class AnalysisEngineTests(TestCase):
