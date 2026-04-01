@@ -301,13 +301,16 @@ def _build_model_mix(analysis_queryset):
 
     total = sum(model_counts.values())
     trained_ratio = round((model_counts["Trained model"] / total) * 100) if total else 0
-    return _build_donut_chart(
+    chart = _build_donut_chart(
         "Model Source",
         "Runtime split between trained predictions and heuristic safety fallback.",
         list(model_counts.items()),
         center_value=f"{trained_ratio}%",
         center_caption="trained model",
     )
+    chart["trained_count"] = model_counts["Trained model"]
+    chart["heuristic_count"] = model_counts["Heuristic fallback"]
+    return chart
 
 
 def _build_risk_donut(risk_counts):
@@ -339,6 +342,7 @@ def _build_alerts(
     active_device_count,
     model_evaluation_summary,
     approved_training_count,
+    trained_runtime_count,
 ):
     alerts = []
     if high_risk_count:
@@ -386,7 +390,51 @@ def _build_alerts(
             }
         )
 
+    if approved_training_count and trained_runtime_count == 0:
+        alerts.append(
+            {
+                "severity": "info",
+                "title": "Doctor training data is synced, but runtime is still fallback-heavy",
+                "message": (
+                    "Reviewed doctor treatments are reaching the training dataset, but saved case responses are "
+                    "still using heuristic fallback. Run or refresh model training and then generate new analyses "
+                    "to see trained-model usage reflected here."
+                ),
+            }
+        )
+
     return alerts
+
+
+def _build_model_runtime_note(*, approved_training_count, model_mix_chart, training_status_widget):
+    trained_runtime_count = model_mix_chart.get("trained_count", 0)
+    if approved_training_count and trained_runtime_count == 0:
+        last_trained = (
+            training_status_widget.get("last_trained_at")
+            if training_status_widget
+            else None
+        )
+        last_trained_text = (
+            f" Last trained: {timezone.localtime(last_trained).strftime('%d %b %Y %H:%M')}."
+            if last_trained
+            else ""
+        )
+        return (
+            "Doctor Treatment Management entries are syncing into the ML dataset, but the current saved analyses "
+            "still show heuristic fallback. Train or refresh the model, then create fresh analyses to move this "
+            f"runtime split away from 0% trained model.{last_trained_text}"
+        )
+
+    if approved_training_count and trained_runtime_count > 0:
+        return (
+            "Doctor-reviewed treatment records are already contributing to the runtime model mix. As more approved "
+            "cases are added and retraining continues, trained-model coverage should improve further."
+        )
+
+    return (
+        "Add doctor-reviewed treatments to the Doctor Treatment Management workflow to build approved training "
+        "records for future model updates."
+    )
 
 
 def _build_history_highlights(analysis_queryset, limit=4):
@@ -644,6 +692,13 @@ def build_dashboard_context(user):
             },
         ]
 
+    training_status_widget = _build_staff_training_status_widget() if can_access_training_console(user) else None
+    model_runtime_note = _build_model_runtime_note(
+        approved_training_count=approved_training_count,
+        model_mix_chart=model_mix_donut,
+        training_status_widget=training_status_widget,
+    )
+
     context = {
         "dashboard_stats": dashboard_stats,
         "quick_actions": [
@@ -695,13 +750,15 @@ def build_dashboard_context(user):
         "public_treatment_summaries": _build_public_treatment_summaries(),
         "training_dataset_summary": training_summary,
         "model_evaluation_summary": model_evaluation_summary,
-        "training_status_widget": _build_staff_training_status_widget() if can_access_training_console(user) else None,
+        "training_status_widget": training_status_widget,
+        "model_runtime_note": model_runtime_note,
         "alerts": _build_alerts(
             high_risk_count=analysis_summary["high_risk_count"],
             low_confidence_count=analysis_summary["low_confidence_count"],
             active_device_count=len(current_user_logins),
             model_evaluation_summary=model_evaluation_summary,
             approved_training_count=approved_training_count,
+            trained_runtime_count=model_mix_donut.get("trained_count", 0),
         ),
         "user_rows": _build_user_rows() if user.is_staff else [],
     }

@@ -4,6 +4,7 @@ import uuid
 from pathlib import Path
 
 from django.conf import settings
+from django.db.models import Q
 from django.utils import timezone
 
 from medical_app.analysis_engine import (
@@ -12,7 +13,7 @@ from medical_app.analysis_engine import (
     compare_analyses,
     compare_disease_levels,
 )
-from medical_app.models import MedicalAnalysis
+from medical_app.models import MedicalAnalysis, TreatmentTrainingRecord
 from medical_app.services.ai_configuration import (
     DEFAULT_MEDICAL_MODEL,
     build_generation_settings,
@@ -33,16 +34,47 @@ MEDICAL_MODEL = DEFAULT_MEDICAL_MODEL
 logger = logging.getLogger(__name__)
 
 
-def build_summary_prompt(patient_text, language, user_profile=None):
+def _summarize_treatment_knowledge(limit=5):
+    reviewed_records = list(
+        TreatmentTrainingRecord.objects.filter(is_approved=True)
+        .exclude(Q(target_treatment="") | Q(target_treatment__isnull=True))
+        .order_by("-updated_at")[:limit]
+    )
+    if not reviewed_records:
+        return ""
+
+    knowledge_lines = [
+        "Use these doctor-reviewed treatment examples as background clinical knowledge. "
+        "Adapt them carefully to the current case, and never present them as a guaranteed prescription:"
+    ]
+    for index, record in enumerate(reviewed_records, start=1):
+        knowledge_lines.append(
+            (
+                f"{index}. Condition: {record.target_condition or 'General review required'} | "
+                f"Specialization: {record.target_specialization or 'General medicine'} | "
+                f"Treatment: {record.target_treatment}"
+            )
+        )
+    return "\n".join(knowledge_lines)
+
+
+def build_summary_prompt(patient_text, language, user_profile=None, treatment_knowledge=""):
     system_prompt = get_system_prompt()
     prompt_lines = [
         "You are a professional medical assistant.",
         "Give general educational guidance only and encourage urgent care for emergency symptoms.",
         *build_prompt_behavior_lines(user_profile, explicit_language=language),
-        "Use this response format:",
-        "1) Short introduction paragraph.",
-        "2) 3-5 bullet points.",
-        "3) Short conclusion with practical next steps.",
+        "Write a complete clinician-style answer, not a short bullet-only summary.",
+        "Use clear headings and keep the language practical, supportive, and medically careful.",
+        "Cover all of these sections in the final response:",
+        "1) Likely disease / condition overview.",
+        "2) Why this disease may fit the symptoms, image, or report findings.",
+        "3) Highlighted treatment / Doctor Treatment Management plan.",
+        "4) Solution and care approach, including medicines or therapy categories if relevant.",
+        "5) Tests / investigations / follow-up checks that may be required.",
+        "6) Daily routine, diet, hydration, rest, precautions, and things to avoid.",
+        "7) Warning signs / emergency red flags / when to seek in-person doctor review urgently.",
+        "8) Short closing note that this is educational support and does not replace a doctor.",
         f"Patient details: {patient_text or 'No text symptoms provided.'}",
     ]
     if system_prompt:
@@ -50,6 +82,33 @@ def build_summary_prompt(patient_text, language, user_profile=None):
     health_context = build_health_context(user_profile)
     if health_context:
         prompt_lines.append(health_context)
+    if treatment_knowledge:
+        prompt_lines.append(treatment_knowledge)
+    return "\n".join(prompt_lines)
+
+
+def build_report_summary_prompt(patient_text, language, user_profile=None, treatment_knowledge=""):
+    system_prompt = get_system_prompt()
+    prompt_lines = [
+        "You are a professional medical assistant.",
+        *build_prompt_behavior_lines(user_profile, explicit_language=language),
+        "Create a concise structured report findings summary.",
+        "Focus on interpretation and next-step utility.",
+        "Use this response format with short headings:",
+        "1) Condition signal.",
+        "2) Key evidence from report / image / symptoms.",
+        "3) Treatment highlight.",
+        "4) Tests / follow-up.",
+        "5) Daily routine / precautions.",
+        f"Patient details: {patient_text or 'No text symptoms provided.'}",
+    ]
+    if system_prompt:
+        prompt_lines.insert(2, system_prompt)
+    health_context = build_health_context(user_profile)
+    if health_context:
+        prompt_lines.append(health_context)
+    if treatment_knowledge:
+        prompt_lines.append(treatment_knowledge)
     return "\n".join(prompt_lines)
 
 
@@ -213,11 +272,16 @@ def process_clinical_intake(
             )
             return context
 
+        treatment_knowledge = _summarize_treatment_knowledge()
+        combined_patient_text = "\n\n".join(
+            part for part in [context["speech_text"], report_text] if part
+        )
         doctor_response = ai_analyzer(
             query=build_summary_prompt(
-                "\n\n".join(part for part in [context["speech_text"], report_text] if part),
+                combined_patient_text,
                 language,
                 user_profile=user_profile,
+                treatment_knowledge=treatment_knowledge,
             ),
             encoded_image=encoded_image,
             model=medical_model or get_analysis_model_name(),
@@ -225,9 +289,20 @@ def process_clinical_intake(
             **build_generation_settings(),
         )
         context["doctor_response"] = doctor_response
-        context["report_summary"] = doctor_response
+        context["report_summary"] = ai_analyzer(
+            query=build_report_summary_prompt(
+                combined_patient_text,
+                language,
+                user_profile=user_profile,
+                treatment_knowledge=treatment_knowledge,
+            ),
+            encoded_image=encoded_image,
+            model=medical_model or get_analysis_model_name(),
+            mime_type=mime_type,
+            **build_generation_settings(),
+        )
 
-        analysis_source_text = "\n\n".join(part for part in [context["speech_text"], report_text] if part)
+        analysis_source_text = combined_patient_text
         report_insights = _analyze_report_once(report_analysis_cache, analysis_source_text)
         image_insights = analyze_image_record(image_relative_path)
         current_report_source = report_text or analysis_source_text
