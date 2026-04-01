@@ -34,6 +34,7 @@ from .models import (
     TreatmentTrainingRecord,
     UserProfile,
 )
+from .services.analysis import build_report_summary_prompt, build_summary_prompt
 from .services.site_language import SITE_LANGUAGE_SESSION_KEY
 
 user_model = get_user_model()
@@ -833,6 +834,43 @@ class DashboardTests(TestCase):
         self.assertContains(response, "Quick Actions")
         self.assertContains(response, "AI Insights")
         self.assertContains(response, "Analytics")
+
+    def test_dashboard_explains_when_doctor_training_data_exists_but_runtime_is_still_fallback(self):
+        self.client.login(username="admin_user", password="SecurePass123!")
+
+        response = self.client.get(reverse("dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Doctor training data is synced, but runtime is still fallback-heavy")
+        self.assertContains(response, "Doctor Treatment Management entries are syncing into the ML dataset")
+        self.assertContains(response, "0% trained model")
+
+
+class AnalysisPromptTests(TestCase):
+    def test_build_summary_prompt_requests_full_disease_treatment_and_routine_guidance(self):
+        prompt = build_summary_prompt(
+            "Patient has cough, chest tightness, and fever after an abnormal report review.",
+            "english",
+            treatment_knowledge="Doctor-reviewed treatment sample: hydration and bronchodilator support.",
+        )
+
+        self.assertIn("Likely disease / condition overview.", prompt)
+        self.assertIn("Highlighted treatment / Doctor Treatment Management plan.", prompt)
+        self.assertIn("Tests / investigations / follow-up checks", prompt)
+        self.assertIn("Daily routine, diet, hydration, rest, precautions", prompt)
+        self.assertIn("Doctor-reviewed treatment sample", prompt)
+
+    def test_build_report_summary_prompt_requests_treatment_and_follow_up_sections(self):
+        prompt = build_report_summary_prompt(
+            "CT report suggests respiratory inflammation with cough and wheeze.",
+            "english",
+            treatment_knowledge="Doctor-reviewed treatment sample: inhaler support and rest.",
+        )
+
+        self.assertIn("Treatment highlight.", prompt)
+        self.assertIn("Tests / follow-up.", prompt)
+        self.assertIn("Daily routine / precautions.", prompt)
+        self.assertIn("Doctor-reviewed treatment sample", prompt)
 
 
 class HistoryWorkspaceTests(TestCase):

@@ -223,6 +223,12 @@
                 </article>
             {% endfor %}
         </div>
+
+        {% if model_runtime_note %}
+            <div class="info-banner">
+                {{ model_runtime_note }}
+            </div>
+        {% endif %}
     </section>
 
     <div class="dashboard-grid">
